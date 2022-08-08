@@ -16,8 +16,8 @@ func RunPuts(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	var (
-		msg = slices.Fst(args)
-	  print func(string) = i.Out
+		msg                = slices.Fst(args)
+		print func(string) = i.Out
 	)
 	if len(args) == 2 {
 		msg = slices.Lst(args)

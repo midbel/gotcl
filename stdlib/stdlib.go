@@ -58,6 +58,9 @@ func makeEnsemble(name string, set map[string]CommandFunc) CommandFunc {
 }
 
 func executeBool(i Interpreter, str string) (bool, error) {
+	if str == "" {
+		return false, nil
+	}
 	res, err := i.Execute(strings.NewReader(str))
 	if err != nil {
 		return false, err

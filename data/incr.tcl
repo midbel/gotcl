@@ -35,3 +35,8 @@ proc testUpvar {} {
 
 testUpvar
 puts "count outside testUpvar: $count"
+if { ::tcl::mathop::> 10 20 } then {
+  puts "ok"
+} elseif { ::tcl::mathop::!= 10 10 } then {
+  puts "<equal>"
+}

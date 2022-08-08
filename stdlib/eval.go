@@ -40,15 +40,33 @@ func RunWhile(i Interpreter, args []string) (string, error) {
 }
 
 func RunIf(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("if", args, nil)
+	args, err := parseArgs("if", args, func(_ *flag.FlagSet) (int, bool) {
+		return 2, false
+	})
 	if err != nil {
 		return "", err
 	}
-	b, err := executeBool(i, slices.Fst(args))
-	if err != nil || !b {
-		return "", err
+	for len(args) > 0 {
+		b, err := executeBool(i, slices.Fst(args))
+		if err != nil {
+			return "", err
+		}
+		if next := slices.Snd(args); next == "then" {
+			args = slices.Take(args, 2)
+		} else {
+			args = slices.Take(args, 1)
+		}
+		if b {
+			return i.Execute(strings.NewReader(slices.Fst(args)))
+		}
+		args = slices.Rest(args)
+		if kw := slices.Fst(args); kw == "else" {
+			break
+		} else if kw == "elseif" {
+			args = slices.Rest(args)
+		}
 	}
-	return i.Execute(strings.NewReader(slices.Snd(args)))
+	return i.Execute(strings.NewReader(slices.Lst(args)))
 }
 
 func RunSwitch(i Interpreter, args []string) (string, error) {
