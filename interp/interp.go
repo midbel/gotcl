@@ -15,6 +15,15 @@ import (
 
 const Version = "0.1.2"
 
+const (
+	argc     = "argc"
+	argv     = "argv"
+	arg0     = "arg0"
+	tclcmd   = "tcl_command"
+	tclver   = "tcl_version"
+	tcldepth = "tcl_depth"
+)
+
 type Interp struct {
 	Env      env.Environment
 	Commands map[string]stdlib.CommandFunc
@@ -102,32 +111,65 @@ func (i *Interp) Err(str string) {
 }
 
 func (i *Interp) Define(name, value string) error {
+	if isSpecial(name) {
+		return env.ErrForbidden
+	}
 	return i.Env.Define(name, value)
+}
+
+func (i *Interp) Link(name string) error {
+	if isSpecial(name) {
+		return env.ErrForbidden
+	}
+	return i.Env.Link(name)
+}
+
+func (i *Interp) LinkAt(name, alias string, level int) error {
+	if isSpecial(name) {
+		return env.ErrForbidden
+	}
+	return i.Env.LinkAt(name, alias, level)
 }
 
 func (i *Interp) Resolve(name string) (string, error) {
 	switch name {
-	case "argc":
+	case argc:
 		n := len(os.Args) - 1
 		return strconv.Itoa(n), nil
-	case "argv":
+	case argv:
 		return strings.Join(os.Args[1:], " "), nil
-	case "arg0":
+	case arg0:
 		return os.Args[0], nil
-	case "tcl_command":
+	case tclcmd:
 		return strconv.Itoa(i.Count), nil
-	case "tcl_depth":
+	case tcldepth:
 		return strconv.Itoa(i.Depth), nil
+	case tclver:
+		return i.Version(), nil
+	default:
+		return i.Env.Resolve(name)
 	}
-	return i.Env.Resolve(name)
 }
 
 func (i *Interp) Delete(name string) error {
+	if isSpecial(name) {
+		return env.ErrForbidden
+	}
 	return i.Env.Delete(name)
 }
 
 func (i *Interp) Exists(name string) bool {
+	if isSpecial(name) {
+		return true
+	}
 	return i.Env.Exists(name)
+}
+
+func (i *Interp) IsSet(name string) bool {
+	if isSpecial(name) {
+		return true
+	}
+	return i.Env.IsSet(name)
 }
 
 func (i *Interp) Do(name string, do func(string) (string, error)) (string, error) {
@@ -173,7 +215,12 @@ func (i *Interp) RenameFunc(prev, next string) {
 
 func (i *Interp) Sub() stdlib.Interpreter {
 	s := *i
-	s.Env = env.EnclosedEnv(i)
+	s.Depth++
+	s.Commands = make(map[string]stdlib.CommandFunc)
+	for k, cmd := range i.Commands {
+		s.Commands[k] = cmd
+	}
+	s.Env = env.EnclosedEnv(i.Env)
 	return &s
 }
 
@@ -241,15 +288,17 @@ func makeCommand(args, body string) (stdlib.CommandFunc, error) {
 	}
 	var list []arg
 	args = strings.TrimSpace(args)
-	for {
-		var a arg
-		args, a.Name, a.Default = splitArg(args)
-		list = append(list, a)
-		if a.Name == "" && a.Default == "" {
-			return nil, fmt.Errorf("syntax error")
-		}
-		if args == "" {
-			break
+	if len(args) > 0 {
+		for {
+			var a arg
+			args, a.Name, a.Default = splitArg(args)
+			list = append(list, a)
+			if a.Name == "" && a.Default == "" {
+				return nil, fmt.Errorf("syntax error")
+			}
+			if args == "" {
+				break
+			}
 		}
 	}
 	return func(i stdlib.Interpreter, args []string) (string, error) {
@@ -280,4 +329,18 @@ func splitArg(str string) (string, string, string) {
 		str = strings.TrimSpace(rest)
 	}
 	return str, n, d
+}
+
+func isSpecial(name string) bool {
+	switch name {
+	default:
+		return false
+	case argc:
+	case argv:
+	case arg0:
+	case tclcmd:
+	case tclver:
+	case tcldepth:
+	}
+	return true
 }

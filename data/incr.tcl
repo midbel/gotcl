@@ -25,3 +25,12 @@ proc sayHello {who {message hello}} {
 sayHello foobar
 sayHello foobar goodbye
 clock seconds
+
+proc testUpvar {} {
+  upvar 1 count counter
+  incr counter
+  puts "results counter (testUpvar): $counter"
+}
+
+testUpvar
+puts "count outside testUpvar: $count"
