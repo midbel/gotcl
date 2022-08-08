@@ -1,3 +1,4 @@
+#! /usr/bin/tclsh
 set  i 0
 incr i # returns 1 and update the value of $i to 1
 puts "result: $i (should be 1)" # print 1 to stdout

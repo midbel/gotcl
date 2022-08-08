@@ -103,6 +103,9 @@ func (e *env) Define(name, value string) error {
 }
 
 func (e *env) Delete(name string) error {
+	if v, ok := e.values[name]; ok && v.refcount > 0 {
+		v.refcount--
+	}
 	delete(e.values, name)
 	return nil
 }

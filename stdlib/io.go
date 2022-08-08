@@ -15,6 +15,20 @@ func RunPuts(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	i.Out(slices.Fst(args))
+	var (
+		msg = slices.Fst(args)
+	  print func(string) = i.Out
+	)
+	if len(args) == 2 {
+		msg = slices.Lst(args)
+		if dst := slices.Fst(args); dst == "stdout" {
+			print = i.Out
+		} else if dst == "stderr" {
+			print = i.Err
+		} else {
+			// TBD
+		}
+	}
+	print(msg)
 	return "", nil
 }
