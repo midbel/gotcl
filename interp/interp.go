@@ -33,6 +33,8 @@ func New() stdlib.Interpreter {
 	}
 	i.registerFunc("set", stdlib.RunSet)
 	i.registerFunc("unset", stdlib.RunUnset)
+	i.registerFunc("global", stdlib.RunGlobal)
+	i.registerFunc("upvar", stdlib.RunUpvar)
 	i.registerFunc("append", stdlib.RunAppend)
 	i.registerFunc("rename", stdlib.RunRename)
 	i.registerFunc("infos", stdlib.RunInfos())

@@ -6,6 +6,26 @@ import (
 	"github.com/midbel/slices"
 )
 
+func RunUpvar(i Interpreter, args []string) (string, error) {
+	args, err := parseArgs("upvar", args, func(_ *flag.FlagSet) (int, bool) {
+		return 1, false
+	})
+	if err != nil {
+		return "", err
+	}
+	return "", nil
+}
+
+func RunGlobal(i Interpreter, args []string) (string, error) {
+	args, err := parseArgs("global", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, false
+	})
+	if err != nil {
+		return "", err
+	}
+	return "", nil
+}
+
 func RunSet(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("set", args, func(_ *flag.FlagSet) (int, bool) {
 		return 1, false
