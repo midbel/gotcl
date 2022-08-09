@@ -41,8 +41,8 @@ if { ::tcl::mathop::> 10 20 } then {
   puts "<equal>"
 }
 
-switch foo {
-  foo { puts "foo" }
+switch foobar {
+  "foo*[a-z]*" { puts "foo" }
   bar { puts "bar" }
   default { puts "something else" }
 }
