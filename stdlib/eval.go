@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/midbel/gotcl/expr"
+	"github.com/midbel/gotcl/glob"
 	"github.com/midbel/slices"
 )
 
@@ -70,7 +71,32 @@ func RunIf(i Interpreter, args []string) (string, error) {
 }
 
 func RunSwitch(i Interpreter, args []string) (string, error) {
-	return "", ErrImplemented
+	args, err := parseArgs("switch", args, func(_ *flag.FlagSet) (int, bool) {
+		return 2, true
+	})
+	if err != nil {
+		return "", err
+	}
+	list, err := i.Split(slices.Snd(args))
+	if err != nil {
+		return "", err
+	}
+	if len(list)%2 != 0 {
+		return "", ErrArgument
+	}
+	var alt string
+	for j := 0; j < len(list); j += 2 {
+		if list[j] == "default" {
+			alt = list[j+1]
+		}
+		if glob.Match(slices.Fst(args), list[j]) {
+			return i.Execute(strings.NewReader(list[j+1]))
+		}
+	}
+	if alt != "" {
+		return i.Execute(strings.NewReader(alt))
+	}
+	return "", nil
 }
 
 func RunBreak(i Interpreter, args []string) (string, error) {

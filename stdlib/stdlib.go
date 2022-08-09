@@ -31,6 +31,8 @@ type Interpreter interface {
 	Do(string, func(string) (string, error)) (string, error)
 	Execute(io.Reader) (string, error)
 
+	Split(string) ([]string, error)
+
 	Out(string)
 	Err(string)
 

@@ -40,3 +40,9 @@ if { ::tcl::mathop::> 10 20 } then {
 } elseif { ::tcl::mathop::!= 10 10 } then {
   puts "<equal>"
 }
+
+switch foo {
+  foo { puts "foo" }
+  bar { puts "bar" }
+  default { puts "something else" }
+}

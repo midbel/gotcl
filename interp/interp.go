@@ -11,6 +11,7 @@ import (
 
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/gotcl/stdlib"
+	"github.com/midbel/slices"
 )
 
 const Version = "0.1.2"
@@ -222,6 +223,14 @@ func (i *Interp) Sub() stdlib.Interpreter {
 	}
 	s.Env = env.EnclosedEnv(i.Env)
 	return &s
+}
+
+func (i *Interp) Split(str string) ([]string, error) {
+	list, err := scan(str)
+	if err == nil {
+		list = slices.Filter(list, func(v string) bool { return v != "" })
+	}
+	return list, err
 }
 
 func (i *Interp) Execute(r io.Reader) (string, error) {
