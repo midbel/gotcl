@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/midbel/gotcl/env"
+	"github.com/midbel/gotcl/glob"
 	"github.com/midbel/gotcl/stdlib"
 	"github.com/midbel/slices"
 )
@@ -25,10 +26,23 @@ const (
 	tcldepth = "tcl_depth"
 )
 
-type Interp struct {
+type Namespace struct {
+	parent   *Namespace
+	Name     string
 	Env      env.Environment
 	Commands map[string]stdlib.CommandFunc
+}
+
+func (n *Namespace) Lookup(name string) (stdlib.CommandFunc, error) {
+	return nil, nil
+}
+
+type Interp struct {
+	Env      env.Environment
+	Commands map[string]stdlib.Executer
 	Files    map[string]*os.File
+
+	nslist *slices.Stack[*Namespace]
 
 	Echo  bool
 	Depth int
@@ -37,50 +51,92 @@ type Interp struct {
 
 func New() stdlib.Interpreter {
 	i := &Interp{
-		Commands: make(map[string]stdlib.CommandFunc),
+		Commands: make(map[string]stdlib.Executer),
 		Env:      env.EmptyEnv(),
 		Files:    make(map[string]*os.File),
 	}
-	i.registerFunc("set", stdlib.RunSet)
-	i.registerFunc("unset", stdlib.RunUnset)
-	i.registerFunc("global", stdlib.RunGlobal)
-	i.registerFunc("upvar", stdlib.RunUpvar)
-	i.registerFunc("append", stdlib.RunAppend)
-	i.registerFunc("rename", stdlib.RunRename)
-	i.registerFunc("infos", stdlib.RunInfos())
-	i.registerFunc("string", stdlib.RunString())
-	i.registerFunc("clock", stdlib.RunClock())
-	i.registerFunc("file", stdlib.RunFile())
-	i.registerFunc("exit", stdlib.RunExit)
-	i.registerFunc("proc", stdlib.RunProc)
-	i.registerFunc("expr", stdlib.RunExpr)
-	i.registerFunc("incr", stdlib.RunIncr)
-	i.registerFunc("decr", stdlib.RunDecr)
-	i.registerFunc("puts", stdlib.RunPuts)
-	i.registerFunc("cd", stdlib.RunChdir)
-	i.registerFunc("pid", stdlib.RunPid)
-	i.registerFunc("pwd", stdlib.RunPwd)
-	i.registerFunc("for", stdlib.RunFor)
-	i.registerFunc("while", stdlib.RunWhile)
-	i.registerFunc("if", stdlib.RunIf)
-	i.registerFunc("switch", stdlib.RunSwitch)
-	i.registerFunc("break", stdlib.RunBreak)
-	i.registerFunc("continue", stdlib.RunContinue)
-	i.registerFunc("::tcl::mathop::!", stdlib.RunNot)
-	i.registerFunc("::tcl::mathop::+", stdlib.RunAdd)
-	i.registerFunc("::tcl::mathop::-", stdlib.RunSub)
-	i.registerFunc("::tcl::mathop::*", stdlib.RunMul)
-	i.registerFunc("::tcl::mathop::**", stdlib.RunPow)
-	i.registerFunc("::tcl::mathop::/", stdlib.RunDiv)
-	i.registerFunc("::tcl::mathop::%", stdlib.RunMod)
-	i.registerFunc("::tcl::mathop::==", stdlib.RunEq)
-	i.registerFunc("::tcl::mathop::!=", stdlib.RunNe)
-	i.registerFunc("::tcl::mathop::<", stdlib.RunLt)
-	i.registerFunc("::tcl::mathop::<=", stdlib.RunLe)
-	i.registerFunc("::tcl::mathop::>", stdlib.RunGt)
-	i.registerFunc("::tcl::mathop::>=", stdlib.RunGe)
+	i.registerCmd("set", stdlib.RunSet)
+	i.registerCmd("unset", stdlib.RunUnset)
+	i.registerCmd("global", stdlib.RunGlobal)
+	i.registerCmd("upvar", stdlib.RunUpvar)
+	i.registerCmd("append", stdlib.RunAppend)
+	i.registerCmd("rename", stdlib.RunRename)
+	i.registerCmd("info", stdlib.RunInfos())
+	i.registerCmd("string", stdlib.RunString())
+	i.registerCmd("clock", stdlib.RunClock())
+	i.registerCmd("file", stdlib.RunFile())
+	i.registerCmd("exit", stdlib.RunExit)
+	i.registerCmd("proc", stdlib.RunProc)
+	i.registerCmd("expr", stdlib.RunExpr)
+	i.registerCmd("incr", stdlib.RunIncr)
+	i.registerCmd("decr", stdlib.RunDecr)
+	i.registerCmd("puts", stdlib.RunPuts)
+	i.registerCmd("cd", stdlib.RunChdir)
+	i.registerCmd("pid", stdlib.RunPid)
+	i.registerCmd("pwd", stdlib.RunPwd)
+	i.registerCmd("for", stdlib.RunFor)
+	i.registerCmd("while", stdlib.RunWhile)
+	i.registerCmd("if", stdlib.RunIf)
+	i.registerCmd("switch", stdlib.RunSwitch)
+	i.registerCmd("break", stdlib.RunBreak)
+	i.registerCmd("continue", stdlib.RunContinue)
+	i.registerCmd("::tcl::mathop::!", stdlib.RunNot)
+	i.registerCmd("::tcl::mathop::+", stdlib.RunAdd)
+	i.registerCmd("::tcl::mathop::-", stdlib.RunSub)
+	i.registerCmd("::tcl::mathop::*", stdlib.RunMul)
+	i.registerCmd("::tcl::mathop::**", stdlib.RunPow)
+	i.registerCmd("::tcl::mathop::/", stdlib.RunDiv)
+	i.registerCmd("::tcl::mathop::%", stdlib.RunMod)
+	i.registerCmd("::tcl::mathop::==", stdlib.RunEq)
+	i.registerCmd("::tcl::mathop::!=", stdlib.RunNe)
+	i.registerCmd("::tcl::mathop::<", stdlib.RunLt)
+	i.registerCmd("::tcl::mathop::<=", stdlib.RunLe)
+	i.registerCmd("::tcl::mathop::>", stdlib.RunGt)
+	i.registerCmd("::tcl::mathop::>=", stdlib.RunGe)
 
 	return i
+}
+
+func (i *Interp) Procedures(pat string) []string {
+	var list []string
+	for n, e := range i.Commands {
+		if _, ok := e.(procedure); ok {
+			list = append(list, n)
+		}
+	}
+	return glob.Filter(list, pat)
+}
+
+func (i *Interp) ProcBody(name string) (string, error) {
+	e, ok := i.Commands[name]
+	if !ok {
+		return "", fmt.Errorf("%s: not defined", name)
+	}
+	p, ok := e.(procedure)
+	if !ok {
+		return "", fmt.Errorf("%s: not defined with proc command", name)
+	}
+	return p.Body, nil
+}
+
+func (i *Interp) ProcArgs(name string) ([]string, error) {
+	e, ok := i.Commands[name]
+	if !ok {
+		return nil, fmt.Errorf("%s: not defined", name)
+	}
+	p, ok := e.(procedure)
+	if !ok {
+		return nil, fmt.Errorf("%s: not defined with proc command", name)
+	}
+	var args []string
+	for _, a := range p.Args {
+		args = append(args, a.Name)
+	}
+	return args, nil
+}
+
+func (i *Interp) ProcDefault(name string, arg string) (string, bool, error) {
+	return "", false, nil
 }
 
 func (i *Interp) Version() string {
@@ -186,15 +242,19 @@ func (i *Interp) Do(name string, do func(string) (string, error)) (string, error
 }
 
 func (i *Interp) RegisterFunc(name, args, body string) error {
-	cmd, err := makeCommand(args, body)
+	p, err := createProcedure(args, body)
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
-	i.registerFunc(name, cmd)
+	i.registerFunc(name, p)
 	return nil
 }
 
-func (i *Interp) registerFunc(name string, cmd stdlib.CommandFunc) {
+func (i *Interp) registerCmd(name string, cmd stdlib.CommandFunc) {
+	i.registerFunc(name, createExecuter(cmd))
+}
+
+func (i *Interp) registerFunc(name string, cmd stdlib.Executer) {
 	i.Commands[name] = cmd
 }
 
@@ -217,7 +277,7 @@ func (i *Interp) RenameFunc(prev, next string) {
 func (i *Interp) Sub() stdlib.Interpreter {
 	s := *i
 	s.Depth++
-	s.Commands = make(map[string]stdlib.CommandFunc)
+	s.Commands = make(map[string]stdlib.Executer)
 	for k, cmd := range i.Commands {
 		s.Commands[k] = cmd
 	}
@@ -278,7 +338,7 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 	if i.Echo {
 		i.Out(fmt.Sprintf("execute: %s", c.Cmd))
 	}
-	res, err := exec(i, c.Args)
+	res, err := exec.Execute(i, c.Args)
 	if err != nil {
 		err = fmt.Errorf("%s: %w", c.Cmd, err)
 	}
@@ -290,16 +350,70 @@ func (i *Interp) executeExt(c *Command) (string, error) {
 	return string(res), err
 }
 
-func makeCommand(args, body string) (stdlib.CommandFunc, error) {
-	type arg struct {
-		Name    string
-		Default string
+type argument struct {
+	Name    string
+	Default string
+}
+
+type executer struct {
+	stdlib.CommandFunc
+}
+
+func createExecuter(cmd stdlib.CommandFunc) stdlib.Executer {
+	return executer{
+		CommandFunc: cmd,
 	}
-	var list []arg
+}
+
+func (e executer) Execute(i stdlib.Interpreter, args []string) (string, error) {
+	return e.CommandFunc(i, args)
+}
+
+type procedure struct {
+	Body     string
+	variadic bool
+	Args     []argument
+}
+
+func createProcedure(args, body string) (procedure, error) {
+	proc := procedure{
+		Body:     body,
+		variadic: false,
+	}
 	args = strings.TrimSpace(args)
 	if len(args) > 0 {
 		for {
-			var a arg
+			var a argument
+			args, a.Name, a.Default = splitArg(args)
+			proc.Args = append(proc.Args, a)
+			if a.Name == "" && a.Default == "" {
+				return proc, fmt.Errorf("syntax error")
+			}
+			if args == "" {
+				break
+			}
+		}
+	}
+	return proc, nil
+}
+
+func (p procedure) Execute(i stdlib.Interpreter, args []string) (string, error) {
+	i = i.Sub()
+	for j, a := range p.Args {
+		if j < len(args) {
+			a.Default = args[j]
+		}
+		i.Define(a.Name, a.Default)
+	}
+	return i.Execute(strings.NewReader(p.Body))
+}
+
+func makeCommand(args, body string) (stdlib.CommandFunc, error) {
+	var list []argument
+	args = strings.TrimSpace(args)
+	if len(args) > 0 {
+		for {
+			var a argument
 			args, a.Name, a.Default = splitArg(args)
 			list = append(list, a)
 			if a.Name == "" && a.Default == "" {

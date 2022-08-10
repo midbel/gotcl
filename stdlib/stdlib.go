@@ -21,6 +21,10 @@ var (
 	ErrIndex       = errors.New("index out of range")
 )
 
+type Executer interface {
+	Execute(Interpreter, []string) (string, error)
+}
+
 type CommandFunc func(Interpreter, []string) (string, error)
 
 type Interpreter interface {

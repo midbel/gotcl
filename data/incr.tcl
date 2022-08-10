@@ -42,7 +42,11 @@ if { ::tcl::mathop::> 10 20 } then {
 }
 
 switch foobar {
-  "foo*[a-z]*" { puts "foo" }
+  {foo*[a-z]*} { puts "foo" }
   bar { puts "bar" }
   default { puts "something else" }
 }
+
+puts "procs: [info procs]"
+puts "args: [info args sayHello]"
+puts "body: [info body testUpvar]"

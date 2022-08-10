@@ -11,10 +11,16 @@ import (
 var ErrPattern = errors.New("bad pattern")
 
 func Match(str, pattern string) bool {
+	if pattern == "" {
+		return true
+	}
 	return match(str, pattern)
 }
 
 func Filter(list []string, pattern string) []string {
+	if pattern == "" {
+		return list
+	}
 	var res []string
 	for i := range list {
 		if ok := match(list[i], pattern); !ok {
