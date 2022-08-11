@@ -29,11 +29,11 @@ func RunInfos() CommandFunc {
 		"nameofexecutable": runExecutable,
 		"args":             runProcArgs,
 		"body":             runProcBody,
-		"cmdcount":         runCommandCount,
+		"cmdcount":         runCmdCount,
 		"commands":         runCommands,
 		"default":          runProcDefaultArg,
 		"globals":          runGlobals,
-		"level":            runLevel,
+		"level":            runCmdDepth,
 		"locals":           runLocals,
 		"procs":            runProcs,
 		"vars":             runVars,
@@ -45,12 +45,32 @@ func runCommands(i Interpreter, args []string) (string, error) {
 	return "", nil
 }
 
-func runCommandCount(i Interpreter, args []string) (string, error) {
-	return "", nil
+func runCmdCount(i Interpreter, args []string) (string, error) {
+	args, err := parseArgs("cmdcount", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, true
+	})
+	if err != nil {
+		return "", err
+	}
+	return introspectCmd(i, func(ci CommandIntrospecter) (string, error) {
+		fmt.Println("cmdcount", ci.CmdCount())
+		n := strconv.Itoa(ci.CmdCount())
+		return n, nil
+	})
 }
 
-func runLevel(i Interpreter, args []string) (string, error) {
-	return "", nil
+func runCmdDepth(i Interpreter, args []string) (string, error) {
+	args, err := parseArgs("level", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, false
+	})
+	if err != nil {
+		return "", err
+	}
+	return introspectCmd(i, func(ci CommandIntrospecter) (string, error) {
+		fmt.Println("cmddepth")
+		n := strconv.Itoa(ci.CmdDepth())
+		return n, nil
+	})
 }
 
 func runProcs(i Interpreter, args []string) (string, error) {

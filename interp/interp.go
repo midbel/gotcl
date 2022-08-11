@@ -97,6 +97,14 @@ func New() stdlib.Interpreter {
 	return i
 }
 
+func (i *Interp) CmdDepth() int {
+	return i.Depth
+}
+
+func (i *Interp) CmdCount() int {
+	return i.Count
+}
+
 func (i *Interp) Procedures(pat string) []string {
 	var list []string
 	for n, e := range i.Commands {

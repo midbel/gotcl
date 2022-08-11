@@ -50,3 +50,9 @@ switch foobar {
 puts "procs: [info procs]"
 puts "args: [info args sayHello]"
 puts "body: [info body testUpvar]"
+puts [info cmdcount]
+puts [info level]
+
+set now [clock seconds]
+clock format $now "%Y-%m-%d %H:%M"
+clock scan "2022-08-22 20:01" "%Y-%m-%d %H:%M"
