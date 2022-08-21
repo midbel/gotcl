@@ -28,12 +28,32 @@ func Scan(str, pat string) (int64, error) {
 }
 
 var rules = map[rune]string{
-	'd': "02",   // day of month two digits
-	'j': "002",  // day of year
-	'm': "01",   // months 2 digits
-	'M': "04",   // minutes 2 digits
+	'a': "Mon",
+	'A': "Monday",
+	'b': "Jan",
+	'B': "January",
+	'd': "02", // day of month two digits
+	'D': "01/02/2006",
+	'e': "_2",
+	'h': "Jan",
+	'H': "15", // hour of the day 2 digits
+	'I': "3",
+	'j': "002", // day of year
+	'k': "15",
+	'K': "03",
+	'm': "01", // months 2 digits
+	'M': "04", // minutes 2 digits
+	'N': "_1",
+	'p': "PM",
+	'R': "15:04",
+	's': "",
+	'S': "05",
+	'T': "15:04:05",
+	'y': "06",
 	'Y': "2006", // year 4 digits
-	'H': "15",   // hour of the day 2 digits
+	'z': "-07:00",
+	'Z': "Z",
+	'+': "Mon Jan 02 15:04:05 Z 2006",
 }
 
 func parseFormat(str string) (string, error) {
@@ -47,7 +67,15 @@ func parseFormat(str string) (string, error) {
 			r, _, _ = rs.ReadRune()
 			part, ok := rules[r]
 			if !ok {
-				return "", fmt.Errorf("%c: unknown specifier", r)
+				if r == 's' {
+
+				} else if r == 't' {
+					part = "\t"
+				} else if r == '%' {
+					part = "%"
+				} else {
+					return "", fmt.Errorf("%c: unknown specifier", r)
+				}
 			}
 			buf.WriteString(part)
 		} else {
