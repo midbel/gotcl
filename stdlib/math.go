@@ -6,6 +6,7 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/midbel/gotcl/stdlib/conv"
 	"github.com/midbel/slices"
 )
 
@@ -228,7 +229,7 @@ func compareOp(args []string, cmp compFunc) (string, error) {
 		}
 		res = val
 	}
-	return strconv.FormatBool(ok), nil
+	return conv.Bool(ok), nil
 }
 
 type applyFunc func(float64, float64) (float64, error)

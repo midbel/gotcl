@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/midbel/gotcl/stdlib/conv"
 	"github.com/midbel/slices"
 )
 
@@ -137,9 +138,9 @@ func runProcDefaultArg(i Interpreter, args []string) (string, error) {
 			return "", err
 		}
 		if !ok {
-			return "0", nil
+			return conv.False(), nil
 		}
-		return "1", i.Define(slices.Lst(args), val)
+		return conv.True(), i.Define(slices.Lst(args), val)
 	})
 }
 
@@ -191,7 +192,7 @@ func runExists(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	ok := i.Exists(slices.Fst(args))
-	return strconv.FormatBool(ok), nil
+	return conv.Bool(ok), nil
 }
 
 func runVersion(i Interpreter, args []string) (string, error) {

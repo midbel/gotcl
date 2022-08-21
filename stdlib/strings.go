@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/midbel/gotcl/stdlib/conv"
 	"github.com/midbel/gotcl/stdlib/strutil"
 	"github.com/midbel/slices"
 )
@@ -90,7 +91,7 @@ func runEqual(i Interpreter, args []string) (string, error) {
 		fst = strings.ToLower(fst)
 		lst = strings.ToLower(lst)
 	}
-	return strconv.FormatBool(fst == lst), nil
+	return conv.Bool(fst == lst), nil
 }
 
 func runFirst(i Interpreter, args []string) (string, error) {
