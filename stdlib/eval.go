@@ -88,6 +88,7 @@ func RunSwitch(i Interpreter, args []string) (string, error) {
 	for j := 0; j < len(list); j += 2 {
 		if list[j] == "default" {
 			alt = list[j+1]
+			continue
 		}
 		if glob.Match(slices.Fst(args), list[j]) {
 			return i.Execute(strings.NewReader(list[j+1]))

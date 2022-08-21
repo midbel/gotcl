@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/midbel/gotcl/stdlib/strutil"
 	"github.com/midbel/slices"
 )
 
@@ -167,8 +168,7 @@ func runRange(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	res := slices.Fst(args)
-	return res[first:last], nil
+	return strutil.Range(slices.Fst(args), first, last)
 }
 
 func runMap(i Interpreter, args []string) (string, error) {
@@ -180,31 +180,7 @@ func runMap(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var (
-		str  = slices.Fst(args)
-		list = strings.Fields(slices.Snd(args))
-	)
-	if len(list) == 0 || len(str) == 0 {
-		return str, nil
-	}
-	if len(list)%2 != 0 {
-		return "", fmt.Errorf("invalid array length")
-	}
-	for old, pos := 0, 0; pos < len(str); {
-		old = pos
-		for i := 0; i < len(list); i += 2 {
-			pat, rep := list[i], list[i+1]
-			if strings.HasPrefix(strings.ToLower(str[pos:]), strings.ToLower(pat)) {
-				str = str[:pos] + rep + str[pos+len(pat):]
-				pos += len(rep)
-				break
-			}
-		}
-		if old == pos {
-			pos++
-		}
-	}
-	return str, nil
+	return strutil.Map(slices.Fst(args), strings.Fields(slices.Snd(args)), nocase)
 }
 
 func runReplace(i Interpreter, args []string) (string, error) {
@@ -222,13 +198,7 @@ func runReplace(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	res := slices.Fst(args)
-	if r := slices.At(args, 4); r != "" {
-		res = strings.ReplaceAll(res, res[first:last], r)
-	} else {
-		res = res[:first] + res[last+1:]
-	}
-	return res, nil
+	return strutil.Replace(slices.Fst(args), slices.At(args, 4), first, last)
 }
 
 func runRepeat(i Interpreter, args []string) (string, error) {
@@ -319,15 +289,7 @@ func runReverse(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var (
-		str  = []rune(slices.Fst(args))
-		list = make([]rune, len(str))
-	)
-	for i, j := len(str)-1, 0; i >= 0; i-- {
-		list[j] = str[i]
-		j++
-	}
-	return string(list), nil
+	return strutil.Reverse(slices.Fst(args)), nil
 }
 
 func runLength(i Interpreter, args []string) (string, error) {
