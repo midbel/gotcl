@@ -2,50 +2,16 @@ package stdlib
 
 import (
 	"flag"
-	"strconv"
 
 	"github.com/midbel/slices"
 )
 
 func RunUpvar(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("upvar", args, func(_ *flag.FlagSet) (int, bool) {
-		return 1, false
-	})
-	if err != nil {
-		return "", err
-	}
-	var level int
-	if len(args) > 1 {
-		level, err = strconv.Atoi(slices.Fst(args))
-		if err != nil {
-			return "", nil
-		}
-	}
-	args = slices.Rest(args)
-	if len(args)%2 != 0 {
-		return "", ErrArgument
-	}
-	for j := 0; j < len(args); j += 2 {
-		if err := i.LinkAt(args[j], args[j+1], level); err != nil {
-			return "", err
-		}
-	}
-	return "", nil
+	return "", ErrImplemented
 }
 
 func RunGlobal(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("global", args, func(_ *flag.FlagSet) (int, bool) {
-		return 0, false
-	})
-	if err != nil {
-		return "", err
-	}
-	for _, a := range args {
-		if err := i.Link(a); err != nil {
-			return "", err
-		}
-	}
-	return "", nil
+	return "", ErrImplemented
 }
 
 func RunSet(i Interpreter, args []string) (string, error) {

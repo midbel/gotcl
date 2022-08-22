@@ -43,11 +43,6 @@ type Interpreter interface {
 	RegisterFunc(string, string, string) error
 	UnregisterFunc(string)
 	RenameFunc(string, string)
-
-	Open(string) error
-	Close(string) error
-	Read(string, int) (string, error)
-	Seek(string, int, int) error
 }
 
 func makeEnsemble(name string, set map[string]CommandFunc) CommandFunc {

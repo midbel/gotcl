@@ -26,23 +26,10 @@ const (
 	tcldepth = "tcl_depth"
 )
 
-type Namespace struct {
-	parent   *Namespace
-	Name     string
-	Env      env.Environment
-	Commands map[string]stdlib.CommandFunc
-}
-
-func (n *Namespace) Lookup(name string) (stdlib.CommandFunc, error) {
-	return nil, nil
-}
-
 type Interp struct {
 	Env      env.Environment
 	Commands map[string]stdlib.Executer
 	Files    map[string]*os.File
-
-	nslist *slices.Stack[*Namespace]
 
 	Echo  bool
 	Depth int
@@ -151,22 +138,6 @@ func (i *Interp) Version() string {
 	return Version
 }
 
-func (i *Interp) Open(file string) error {
-	return nil
-}
-
-func (i *Interp) Close(file string) error {
-	return nil
-}
-
-func (i *Interp) Read(file string, size int) (string, error) {
-	return "", nil
-}
-
-func (i *Interp) Seek(file string, offset int, whence int) error {
-	return nil
-}
-
 func (i *Interp) Out(str string) {
 	fmt.Fprintln(os.Stdout, str)
 }
@@ -180,20 +151,6 @@ func (i *Interp) Define(name, value string) error {
 		return env.ErrForbidden
 	}
 	return i.Env.Define(name, value)
-}
-
-func (i *Interp) Link(name string) error {
-	if isSpecial(name) {
-		return env.ErrForbidden
-	}
-	return i.Env.Link(name)
-}
-
-func (i *Interp) LinkAt(name, alias string, level int) error {
-	if isSpecial(name) {
-		return env.ErrForbidden
-	}
-	return i.Env.LinkAt(name, alias, level)
 }
 
 func (i *Interp) Resolve(name string) (string, error) {
@@ -414,34 +371,6 @@ func (p procedure) Execute(i stdlib.Interpreter, args []string) (string, error) 
 		i.Define(a.Name, a.Default)
 	}
 	return i.Execute(strings.NewReader(p.Body))
-}
-
-func makeCommand(args, body string) (stdlib.CommandFunc, error) {
-	var list []argument
-	args = strings.TrimSpace(args)
-	if len(args) > 0 {
-		for {
-			var a argument
-			args, a.Name, a.Default = splitArg(args)
-			list = append(list, a)
-			if a.Name == "" && a.Default == "" {
-				return nil, fmt.Errorf("syntax error")
-			}
-			if args == "" {
-				break
-			}
-		}
-	}
-	return func(i stdlib.Interpreter, args []string) (string, error) {
-		i = i.Sub()
-		for j, a := range list {
-			if j < len(args) {
-				a.Default = args[j]
-			}
-			i.Define(a.Name, a.Default)
-		}
-		return i.Execute(strings.NewReader(body))
-	}, nil
 }
 
 func splitArg(str string) (string, string, string) {
