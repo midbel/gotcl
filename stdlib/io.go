@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/midbel/gotcl/stdlib/conv"
 	"github.com/midbel/slices"
@@ -18,6 +19,7 @@ type FileManager interface {
 	Seek(string, int, int) (int64, error)
 	Tell(string) (int64, error)
 	Gets(string) (string, error)
+	Read(string, int) (string, error)
 }
 
 func RunPuts(i Interpreter, args []string) (string, error) {
@@ -128,6 +130,28 @@ func RunGets(i Interpreter, args []string) (string, error) {
 	}
 	return withFile(i, func(fm FileManager) (string, error) {
 		return fm.Gets(slices.Fst(args))
+	})
+}
+
+func RunRead(i Interpreter, args []string) (string, error) {
+	var nonl bool
+	args, err := parseArgs("read", args, func(set *flag.FlagSet) (int, bool) {
+		set.BoolVar(&nonl, "nonewline", nonl, "nonewline")
+		return 1, false
+	})
+	if err != nil {
+		return "", err
+	}
+	length, err := strconv.ParseInt(slices.Snd(args), 0, 64)
+	if err != nil && slices.Snd(args) != "" {
+		return "", err
+	}
+	return withFile(i, func(fm FileManager) (string, error) {
+		str, err := fm.Read(slices.Fst(args), int(length))
+		if err == nil && nonl {
+			str = strings.TrimSpace(str)
+		}
+		return str, err
 	})
 }
 

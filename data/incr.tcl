@@ -43,3 +43,13 @@ puts [info level]
 set now [clock seconds]
 clock format $now "%Y-%m-%d %H:%M"
 clock scan "2022-08-22 20:01" "%Y-%m-%d %H:%M"
+
+set mod [open go.mod r]
+puts [read $mod]
+close $mod
+
+set mod [open data/incr.tcl]
+for {set i 0} { ::tcl::mathop::< $i 5 } { incr i} {
+  puts "$i: [gets $mod]"
+}
+close $mod

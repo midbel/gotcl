@@ -1,10 +1,13 @@
 package interp
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -68,7 +71,7 @@ func (fs *FileSet) Open(file, mode string) (string, error) {
 	switch mode {
 	default:
 		return "", fmt.Errorf("%s: unknown mode given", mode)
-	case modeReadOnly:
+	case modeReadOnly, "":
 		f, err = os.Open(file)
 	case modeReadBoth:
 	case modeWriteOnly:
@@ -107,7 +110,55 @@ func (fs *FileSet) Tell(fd string) (int64, error) {
 }
 
 func (fs *FileSet) Gets(fd string) (string, error) {
-	return "", nil
+	w, err := fs.lookup(fd)
+	if err != nil {
+		return "", err
+	}
+	var (
+		buf = make([]byte, 4096)
+		ret []byte
+	)
+	off, err := w.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return "", err
+	}
+	for {
+		n, err := w.Read(buf)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return "", err
+		}
+		if n == 0 {
+			break
+		}
+		if x := bytes.IndexByte(buf[:n], '\n'); x >= 0 {
+			ret = append(ret, buf[:x]...)
+			if _, err = w.Seek(off+int64(x+1), io.SeekStart); err != nil {
+				return "", err
+			}
+			break
+		} else {
+			ret = append(ret, buf[:n]...)
+		}
+	}
+	return strings.TrimSpace(string(ret)), nil
+}
+
+func (fs *FileSet) Read(fd string, length int) (string, error) {
+	w, err := fs.lookup(fd)
+	if err != nil {
+		return "", err
+	}
+	var b []byte
+	if length <= 0 {
+		b, err = io.ReadAll(w)
+		return string(b), err
+	}
+	b = make([]byte, length)
+	n, err := io.ReadFull(w, b)
+	if err == nil || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) {
+		return string(b[:n]), nil
+	}
+	return "", err
 }
 
 func (fs *FileSet) Eof(fd string) (bool, error) {
@@ -144,10 +195,4 @@ func (fs *FileSet) lookup(fd string) (*os.File, error) {
 		return nil, fmt.Errorf("%s: undefined channel", fd)
 	}
 	return w, nil
-}
-
-type reader struct {
-}
-
-type writer struct {
 }
