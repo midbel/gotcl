@@ -29,7 +29,6 @@ type CommandFunc func(Interpreter, []string) (string, error)
 
 type Interpreter interface {
 	Version() string
-	Sub() Interpreter
 
 	env.Environment
 	Do(string, func(string) (string, error)) (string, error)
@@ -40,9 +39,9 @@ type Interpreter interface {
 	Out(string)
 	Err(string)
 
-	RegisterFunc(string, string, string) error
-	UnregisterFunc(string)
-	RenameFunc(string, string)
+	Register(string, string, string) error
+	Unregister(string) error
+	Rename(string, string)
 }
 
 func makeEnsemble(name string, set map[string]CommandFunc) CommandFunc {

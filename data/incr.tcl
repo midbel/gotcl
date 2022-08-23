@@ -20,11 +20,7 @@ while { $ne $i 0 } {
   puts "counter: [incr count] - value: [decr i]"
 }
 puts "after while: $count"
-proc sayHello {who {message hello}} {
-  puts "$message $who"
-}
-sayHello foobar
-sayHello foobar goodbye
+
 clock seconds
 
 puts "count outside testUpvar: $count"
@@ -41,8 +37,6 @@ switch foobar {
 }
 
 puts "procs: [info procs]"
-puts "args: [info args sayHello]"
-puts "body: [info body testUpvar]"
 puts [info cmdcount]
 puts [info level]
 

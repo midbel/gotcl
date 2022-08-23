@@ -16,10 +16,10 @@ type CommandIntrospecter interface {
 }
 
 type ProcIntrospecter interface {
-	Procedures(string) []string
-	ProcBody(string) (string, error)
-	ProcArgs(string) ([]string, error)
-	ProcDefault(string, string) (string, bool, error)
+	List(string) []string
+	Body(string) (string, error)
+	Args(string) ([]string, error)
+	Default(string, string) (string, bool, error)
 }
 
 func RunInfos() CommandFunc {
@@ -82,7 +82,7 @@ func runProcs(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return introspectProc(i, func(pi ProcIntrospecter) (string, error) {
-		for _, p := range pi.Procedures(slices.Fst(args)) {
+		for _, p := range pi.List(slices.Fst(args)) {
 			i.Out(p)
 		}
 		return "", nil
@@ -97,7 +97,7 @@ func runProcArgs(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return introspectProc(i, func(pi ProcIntrospecter) (string, error) {
-		args, err := pi.ProcArgs(slices.Fst(args))
+		args, err := pi.Args(slices.Fst(args))
 		if err != nil {
 			return "", err
 		}
@@ -116,7 +116,7 @@ func runProcBody(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return introspectProc(i, func(pi ProcIntrospecter) (string, error) {
-		body, err := pi.ProcBody(slices.Fst(args))
+		body, err := pi.Body(slices.Fst(args))
 		if err != nil {
 			return "", err
 		}
@@ -133,7 +133,7 @@ func runProcDefaultArg(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return introspectProc(i, func(pi ProcIntrospecter) (string, error) {
-		val, ok, err := pi.ProcDefault(slices.Fst(args), slices.Snd(args))
+		val, ok, err := pi.Default(slices.Fst(args), slices.Snd(args))
 		if err != nil {
 			return "", err
 		}

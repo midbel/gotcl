@@ -155,7 +155,7 @@ func RunProc(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = i.RegisterFunc(slices.Fst(args), slices.Snd(args), slices.Lst(args))
+	err = i.Register(slices.Fst(args), slices.Snd(args), slices.Lst(args))
 	return "", err
 }
 

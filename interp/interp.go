@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/midbel/gotcl/env"
-	"github.com/midbel/gotcl/glob"
 	"github.com/midbel/gotcl/stdlib"
 	"github.com/midbel/slices"
 )
@@ -20,118 +19,34 @@ const Version = "0.1.2"
 const (
 	argc     = "argc"
 	argv     = "argv"
-	arg0     = "arg0"
+	arg0     = "argv0"
 	tclcmd   = "tcl_command"
 	tclver   = "tcl_version"
 	tcldepth = "tcl_depth"
 )
 
 type Interp struct {
-	Env      env.Environment
-	Commands map[string]stdlib.Executer
-	Files    map[string]*os.File
+	*Env
+	CommandSet
 
 	Echo  bool
-	Depth int
 	Count int
 }
 
 func New() stdlib.Interpreter {
 	i := &Interp{
-		Commands: make(map[string]stdlib.Executer),
-		Env:      env.EmptyEnv(),
-		Files:    make(map[string]*os.File),
+		CommandSet: DefaultSet(),
+		Env:        Environ(),
 	}
-	i.registerCmd("set", stdlib.RunSet)
-	i.registerCmd("unset", stdlib.RunUnset)
-	i.registerCmd("global", stdlib.RunGlobal)
-	i.registerCmd("upvar", stdlib.RunUpvar)
-	i.registerCmd("append", stdlib.RunAppend)
-	i.registerCmd("rename", stdlib.RunRename)
-	i.registerCmd("info", stdlib.RunInfos())
-	i.registerCmd("string", stdlib.RunString())
-	i.registerCmd("clock", stdlib.RunClock())
-	i.registerCmd("file", stdlib.RunFile())
-	i.registerCmd("exit", stdlib.RunExit)
-	i.registerCmd("proc", stdlib.RunProc)
-	i.registerCmd("expr", stdlib.RunExpr)
-	i.registerCmd("incr", stdlib.RunIncr)
-	i.registerCmd("decr", stdlib.RunDecr)
-	i.registerCmd("puts", stdlib.RunPuts)
-	i.registerCmd("cd", stdlib.RunChdir)
-	i.registerCmd("pid", stdlib.RunPid)
-	i.registerCmd("pwd", stdlib.RunPwd)
-	i.registerCmd("for", stdlib.RunFor)
-	i.registerCmd("while", stdlib.RunWhile)
-	i.registerCmd("if", stdlib.RunIf)
-	i.registerCmd("switch", stdlib.RunSwitch)
-	i.registerCmd("break", stdlib.RunBreak)
-	i.registerCmd("continue", stdlib.RunContinue)
-	i.registerCmd("::tcl::mathop::!", stdlib.RunNot)
-	i.registerCmd("::tcl::mathop::+", stdlib.RunAdd)
-	i.registerCmd("::tcl::mathop::-", stdlib.RunSub)
-	i.registerCmd("::tcl::mathop::*", stdlib.RunMul)
-	i.registerCmd("::tcl::mathop::**", stdlib.RunPow)
-	i.registerCmd("::tcl::mathop::/", stdlib.RunDiv)
-	i.registerCmd("::tcl::mathop::%", stdlib.RunMod)
-	i.registerCmd("::tcl::mathop::==", stdlib.RunEq)
-	i.registerCmd("::tcl::mathop::!=", stdlib.RunNe)
-	i.registerCmd("::tcl::mathop::<", stdlib.RunLt)
-	i.registerCmd("::tcl::mathop::<=", stdlib.RunLe)
-	i.registerCmd("::tcl::mathop::>", stdlib.RunGt)
-	i.registerCmd("::tcl::mathop::>=", stdlib.RunGe)
-
 	return i
 }
 
 func (i *Interp) CmdDepth() int {
-	return i.Depth
+	return i.Env.Depth()
 }
 
 func (i *Interp) CmdCount() int {
 	return i.Count
-}
-
-func (i *Interp) Procedures(pat string) []string {
-	var list []string
-	for n, e := range i.Commands {
-		if _, ok := e.(procedure); ok {
-			list = append(list, n)
-		}
-	}
-	return glob.Filter(list, pat)
-}
-
-func (i *Interp) ProcBody(name string) (string, error) {
-	e, ok := i.Commands[name]
-	if !ok {
-		return "", fmt.Errorf("%s: not defined", name)
-	}
-	p, ok := e.(procedure)
-	if !ok {
-		return "", fmt.Errorf("%s: not defined with proc command", name)
-	}
-	return p.Body, nil
-}
-
-func (i *Interp) ProcArgs(name string) ([]string, error) {
-	e, ok := i.Commands[name]
-	if !ok {
-		return nil, fmt.Errorf("%s: not defined", name)
-	}
-	p, ok := e.(procedure)
-	if !ok {
-		return nil, fmt.Errorf("%s: not defined with proc command", name)
-	}
-	var args []string
-	for _, a := range p.Args {
-		args = append(args, a.Name)
-	}
-	return args, nil
-}
-
-func (i *Interp) ProcDefault(name string, arg string) (string, bool, error) {
-	return "", false, nil
 }
 
 func (i *Interp) Version() string {
@@ -165,7 +80,7 @@ func (i *Interp) Resolve(name string) (string, error) {
 	case tclcmd:
 		return strconv.Itoa(i.Count), nil
 	case tcldepth:
-		return strconv.Itoa(i.Depth), nil
+		return strconv.Itoa(i.CmdDepth()), nil
 	case tclver:
 		return i.Version(), nil
 	default:
@@ -206,50 +121,6 @@ func (i *Interp) Do(name string, do func(string) (string, error)) (string, error
 	return res, err
 }
 
-func (i *Interp) RegisterFunc(name, args, body string) error {
-	p, err := createProcedure(args, body)
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-	i.registerFunc(name, p)
-	return nil
-}
-
-func (i *Interp) registerCmd(name string, cmd stdlib.CommandFunc) {
-	i.registerFunc(name, createExecuter(cmd))
-}
-
-func (i *Interp) registerFunc(name string, cmd stdlib.Executer) {
-	i.Commands[name] = cmd
-}
-
-func (i *Interp) UnregisterFunc(name string) {
-	delete(i.Commands, name)
-}
-
-func (i *Interp) RenameFunc(prev, next string) {
-	cmd, ok := i.Commands[prev]
-	if !ok {
-		return
-	}
-	delete(i.Commands, prev)
-	if next == "" {
-		return
-	}
-	i.Commands[next] = cmd
-}
-
-func (i *Interp) Sub() stdlib.Interpreter {
-	s := *i
-	s.Depth++
-	s.Commands = make(map[string]stdlib.Executer)
-	for k, cmd := range i.Commands {
-		s.Commands[k] = cmd
-	}
-	s.Env = env.EnclosedEnv(i.Env)
-	return &s
-}
-
 func (i *Interp) Split(str string) ([]string, error) {
 	list, err := scan(str)
 	if err == nil {
@@ -259,10 +130,6 @@ func (i *Interp) Split(str string) ([]string, error) {
 }
 
 func (i *Interp) Execute(r io.Reader) (string, error) {
-	defer func() {
-		i.Depth--
-	}()
-	i.Depth++
 	return i.execute(r)
 }
 
@@ -296,12 +163,16 @@ func (i *Interp) execute(r io.Reader) (string, error) {
 }
 
 func (i *Interp) executeCmd(c *Command) (string, error) {
-	exec, ok := i.Commands[c.Cmd]
-	if !ok {
+	exec, err := i.Lookup(c.Cmd)
+	if err != nil {
 		return i.executeExt(c)
 	}
 	if i.Echo {
 		i.Out(fmt.Sprintf("execute: %s", c.Cmd))
+	}
+	if _, ok := exec.(procedure); ok {
+		i.Env.Append()
+		defer i.Env.Pop()
 	}
 	res, err := exec.Execute(i, c.Args)
 	if err != nil {
@@ -313,82 +184,6 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 func (i *Interp) executeExt(c *Command) (string, error) {
 	res, err := exec.Command(c.Cmd, c.Args...).Output()
 	return string(res), err
-}
-
-type argument struct {
-	Name    string
-	Default string
-}
-
-type executer struct {
-	stdlib.CommandFunc
-}
-
-func createExecuter(cmd stdlib.CommandFunc) stdlib.Executer {
-	return executer{
-		CommandFunc: cmd,
-	}
-}
-
-func (e executer) Execute(i stdlib.Interpreter, args []string) (string, error) {
-	return e.CommandFunc(i, args)
-}
-
-type procedure struct {
-	Body     string
-	variadic bool
-	Args     []argument
-}
-
-func createProcedure(args, body string) (procedure, error) {
-	proc := procedure{
-		Body:     body,
-		variadic: false,
-	}
-	args = strings.TrimSpace(args)
-	if len(args) > 0 {
-		for {
-			var a argument
-			args, a.Name, a.Default = splitArg(args)
-			proc.Args = append(proc.Args, a)
-			if a.Name == "" && a.Default == "" {
-				return proc, fmt.Errorf("syntax error")
-			}
-			if args == "" {
-				break
-			}
-		}
-	}
-	return proc, nil
-}
-
-func (p procedure) Execute(i stdlib.Interpreter, args []string) (string, error) {
-	i = i.Sub()
-	for j, a := range p.Args {
-		if j < len(args) {
-			a.Default = args[j]
-		}
-		i.Define(a.Name, a.Default)
-	}
-	return i.Execute(strings.NewReader(p.Body))
-}
-
-func splitArg(str string) (string, string, string) {
-	var n, d string
-	if strings.HasPrefix(str, "{") {
-		tmp, rest, ok := strings.Cut(str[1:], "}")
-		if !ok {
-			return "", "", ""
-		}
-		parts := strings.SplitN(tmp, " ", 2)
-		n, d = parts[0], parts[1]
-		str = strings.TrimSpace(rest)
-	} else {
-		tmp, rest, _ := strings.Cut(str, " ")
-		n = tmp
-		str = strings.TrimSpace(rest)
-	}
-	return str, n, d
 }
 
 func isSpecial(name string) bool {

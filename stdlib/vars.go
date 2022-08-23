@@ -53,7 +53,7 @@ func RunRename(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	i.RenameFunc(slices.Fst(args), slices.Snd(args))
+	i.Rename(slices.Fst(args), slices.Snd(args))
 	return "", nil
 }
 
