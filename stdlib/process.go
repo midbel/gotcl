@@ -2,9 +2,26 @@ package stdlib
 
 import (
 	"flag"
+	"strings"
+	"time"
 
 	"github.com/midbel/slices"
 )
+
+func RunTime(i Interpreter, args []string) (string, error) {
+	args, err := parseArgs("time", args, func(_ *flag.FlagSet) (int, bool) {
+		return 1, true
+	})
+	if err != nil {
+		return "", err
+	}
+	now := time.Now()
+	_, err = i.Execute(strings.NewReader(slices.Fst(args)))
+	if err != nil {
+		return "", err
+	}
+	return time.Since(now).String(), nil
+}
 
 func RunExit(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("exit", args, func(_ *flag.FlagSet) (int, bool) {

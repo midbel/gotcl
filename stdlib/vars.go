@@ -2,16 +2,63 @@ package stdlib
 
 import (
 	"flag"
+	"fmt"
+	"strconv"
 
 	"github.com/midbel/slices"
 )
 
+type Linker interface {
+	Link(string, string) error
+	LinkAt(string, string, int) error
+}
+
 func RunUpvar(i Interpreter, args []string) (string, error) {
-	return "", ErrImplemented
+	args, err := parseArgs("upvar", args, func(_ *flag.FlagSet) (int, bool) {
+		return 2, false
+	})
+	if err != nil {
+		return "", err
+	}
+	lk, ok := i.(Linker)
+	if !ok {
+		return "", fmt.Errorf("interpreter can not create link between variable")
+	}
+	var level int64
+	if len(args)%2 == 0 {
+		level++
+	} else {
+		level, err = strconv.ParseInt(slices.Fst(args), 0, 64)
+		if err != nil {
+			return "", err
+		}
+		args = slices.Rest(args)
+	}
+	for i := 0; i < len(args); i += 2 {
+		if err := lk.LinkAt(args[i], args[i+1], int(level)); err != nil {
+			return "", err
+		}
+	}
+	return "", nil
 }
 
 func RunGlobal(i Interpreter, args []string) (string, error) {
-	return "", ErrImplemented
+	args, err := parseArgs("global", args, func(_ *flag.FlagSet) (int, bool) {
+		return 2, false
+	})
+	if err != nil {
+		return "", err
+	}
+	lk, ok := i.(Linker)
+	if !ok {
+		return "", fmt.Errorf("interpreter can not create link between variable")
+	}
+	for i := 0; i < len(args); i += 2 {
+		if err := lk.Link(args[i], args[i+1]); err != nil {
+			return "", err
+		}
+	}
+	return "", nil
 }
 
 func RunSet(i Interpreter, args []string) (string, error) {

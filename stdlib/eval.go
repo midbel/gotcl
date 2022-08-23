@@ -3,6 +3,7 @@ package stdlib
 import (
 	"errors"
 	"flag"
+	"strconv"
 	"strings"
 
 	"github.com/midbel/gotcl/expr"
@@ -129,6 +130,9 @@ func RunExpr(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if err != nil {
+		return "", err
+	}
 	var str strings.Builder
 	for i := range args {
 		str.WriteString(args[i])
@@ -146,6 +150,27 @@ func RunExpr(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return res.String(), nil
+}
+
+func RunUpLevel(i Interpreter, args []string) (string, error) {
+	args, err := parseArgs("uplevel", args, func(_ *flag.FlagSet) (int, bool) {
+		return 1, false
+	})
+	if err != nil {
+		return "", err
+	}
+	var (
+		level  = 1
+		script = slices.Fst(args)
+	)
+	if len(args) == 2 {
+		level, err = strconv.Atoi(slices.Fst(args))
+		if err != nil {
+			return "", err
+		}
+		script = slices.Snd(args)
+	}
+	return i.ExecuteUp(strings.NewReader(script), level)
 }
 
 func RunProc(i Interpreter, args []string) (string, error) {

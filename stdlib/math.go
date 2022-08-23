@@ -17,12 +17,16 @@ func RunIncr(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	by := 1
+	if n, err := strconv.Atoi(slices.Snd(args)); err == nil {
+		by = n
+	}
 	return i.Do(slices.Fst(args), func(str string) (string, error) {
 		n, err := strconv.Atoi(str)
 		if err != nil {
 			return "", err
 		}
-		n++
+		n += by
 		return strconv.Itoa(n), nil
 	})
 }
@@ -34,12 +38,16 @@ func RunDecr(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	by := 1
+	if n, err := strconv.Atoi(slices.Snd(args)); err == nil {
+		by = n
+	}
 	return i.Do(slices.Fst(args), func(str string) (string, error) {
 		n, err := strconv.Atoi(str)
 		if err != nil {
 			return "", err
 		}
-		n--
+		n -= by
 		return strconv.Itoa(n), nil
 	})
 }

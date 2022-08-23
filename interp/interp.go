@@ -103,6 +103,20 @@ func (i *Interp) IsSet(name string) bool {
 	return i.Env.IsSet(name)
 }
 
+func (i *Interp) Link(dst string, src string) error {
+	if isSpecial(src) {
+		return env.ErrForbidden
+	}
+	return i.Env.Link(dst, src)
+}
+
+func (i *Interp) LinkAt(dst string, src string, level int) error {
+	if isSpecial(src) {
+		return env.ErrForbidden
+	}
+	return i.Env.LinkAt(dst, src, level)
+}
+
 func (i *Interp) Do(name string, do func(string) (string, error)) (string, error) {
 	res, err := i.Resolve(name)
 	if err != nil {
@@ -125,6 +139,21 @@ func (i *Interp) Split(str string) ([]string, error) {
 
 func (i *Interp) Execute(r io.Reader) (string, error) {
 	return i.execute(r)
+}
+
+func (i *Interp) ExecuteUp(r io.Reader, level int) (string, error) {
+	var (
+		err error
+		old = i.Env
+	)
+	defer func() {
+		i.Env = old
+	}()
+	i.Env, err = i.Env.Sub(level)
+	if err != nil {
+		return "", err
+	}
+	return i.Execute(r)
 }
 
 func (i *Interp) execute(r io.Reader) (string, error) {

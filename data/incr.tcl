@@ -59,3 +59,23 @@ proc sayHello {{who foobar}} {
 }
 sayHello
 sayHello nico
+time {
+  for {set i 0} {::tcl::mathop::< $i 10} {incr i} {
+    clock seconds
+  }
+}
+
+set outer 15
+proc incrOuter {} {
+  upvar 1 inner outer
+  incr inner 10
+  puts "inside incrOuter: $inner"
+}
+incrOuter
+puts "outside incrOuter: $outer"
+
+proc incrOuterBis {} {
+  uplevel 1 { set outer 10 }
+}
+incrOuterBis
+puts "outside incrOuterBis: $outer"

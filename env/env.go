@@ -19,6 +19,11 @@ type Environment interface {
 	IsSet(string) bool
 }
 
+type Linker interface {
+	LinkVar(Environment, string, string) error
+	getVar(string) (*variable, error)
+}
+
 type env struct {
 	parent Environment
 	values map[string]*variable
@@ -52,9 +57,13 @@ func (e *env) IsSet(name string) bool {
 }
 
 func (e *env) Define(name, value string) error {
-	e.values[name] = &variable{
-		value:    value,
-		refcount: 1,
+	if !e.IsSet(name) {
+		e.values[name] = &variable{
+			value:    value,
+			refcount: 1,
+		}
+	} else {
+		e.values[name].value = value
 	}
 	return nil
 }
@@ -73,6 +82,23 @@ func (e *env) Resolve(name string) (string, error) {
 		return "", undefinedVar(name)
 	}
 	return e.parent.Resolve(name)
+}
+
+func (e *env) LinkVar(ev Environment, dst, src string) error {
+	other, ok := ev.(Linker)
+	if !ok {
+		return ErrForbidden
+	}
+	var err error
+	e.values[dst], err = other.getVar(src)
+	return err
+}
+
+func (e *env) getVar(name string) (*variable, error) {
+	if !e.IsSet(name) {
+		return nil, fmt.Errorf("%s: %w", name, ErrUndefined)
+	}
+	return e.values[name], nil
 }
 
 type variable struct {
