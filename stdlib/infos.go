@@ -83,7 +83,7 @@ func runProcs(i Interpreter, args []string) (string, error) {
 	}
 	return introspectProc(i, func(pi ProcIntrospecter) (string, error) {
 		for _, p := range pi.List(slices.Fst(args)) {
-			i.Out(p)
+			i.Println("stdout", p)
 		}
 		return "", nil
 	})
@@ -102,7 +102,7 @@ func runProcArgs(i Interpreter, args []string) (string, error) {
 			return "", err
 		}
 		for _, a := range args {
-			i.Out(a)
+			i.Println("stdout", a)
 		}
 		return "", nil
 	})
@@ -120,7 +120,7 @@ func runProcBody(i Interpreter, args []string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		i.Out(body)
+		i.Println("stdout", body)
 		return "", nil
 	})
 }

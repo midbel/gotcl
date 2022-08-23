@@ -51,6 +51,12 @@ func DefaultSet() CommandSet {
 	set.registerCmd("::tcl::mathop::<=", stdlib.RunLe)
 	set.registerCmd("::tcl::mathop::>", stdlib.RunGt)
 	set.registerCmd("::tcl::mathop::>=", stdlib.RunGe)
+	set.registerCmd("open", stdlib.RunOpen)
+	set.registerCmd("close", stdlib.RunClose)
+	set.registerCmd("eof", stdlib.RunEof)
+	set.registerCmd("seek", stdlib.RunSeek)
+	set.registerCmd("tell", stdlib.RunTell)
+	set.registerCmd("gets", stdlib.RunGets)
 
 	return set
 }

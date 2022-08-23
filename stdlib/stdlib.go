@@ -36,8 +36,8 @@ type Interpreter interface {
 
 	Split(string) ([]string, error)
 
-	Out(string)
-	Err(string)
+	Print(string, string) error
+	Println(string, string) error
 
 	Register(string, string, string) error
 	Unregister(string) error

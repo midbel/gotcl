@@ -27,6 +27,7 @@ const (
 
 type Interp struct {
 	*Env
+	*FileSet
 	CommandSet
 
 	Echo  bool
@@ -36,6 +37,7 @@ type Interp struct {
 func New() stdlib.Interpreter {
 	i := &Interp{
 		CommandSet: DefaultSet(),
+		FileSet:    Stdio(),
 		Env:        Environ(),
 	}
 	return i
@@ -51,14 +53,6 @@ func (i *Interp) CmdCount() int {
 
 func (i *Interp) Version() string {
 	return Version
-}
-
-func (i *Interp) Out(str string) {
-	fmt.Fprintln(os.Stdout, str)
-}
-
-func (i *Interp) Err(str string) {
-	fmt.Fprintln(os.Stderr, str)
 }
 
 func (i *Interp) Define(name, value string) error {
@@ -166,9 +160,6 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 	exec, err := i.Lookup(c.Cmd)
 	if err != nil {
 		return i.executeExt(c)
-	}
-	if i.Echo {
-		i.Out(fmt.Sprintf("execute: %s", c.Cmd))
 	}
 	if _, ok := exec.(procedure); ok {
 		i.Env.Append()
