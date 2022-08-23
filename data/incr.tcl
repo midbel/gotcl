@@ -53,3 +53,9 @@ for {set i 0} { ::tcl::mathop::< $i 5 } { incr i} {
   puts "$i: [gets $mod]"
 }
 close $mod
+
+proc sayHello {{who foobar}} {
+  puts "hello $who"
+}
+sayHello
+sayHello nico

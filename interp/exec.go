@@ -214,7 +214,16 @@ func createProcedure(args, body string) (procedure, error) {
 }
 
 func (p procedure) Execute(i stdlib.Interpreter, args []string) (string, error) {
-	return "", stdlib.ErrImplemented
+	for j, a := range p.Args {
+		if j < len(args) {
+			a.Default = args[j]
+		}
+		i.Define(a.Name, a.Default)
+	}
+	if len(args) > len(p.Args) && !p.variadic {
+		return "", stdlib.ErrArgument
+	}
+	return i.Execute(strings.NewReader(p.Body))
 }
 
 func splitArg(str string) (string, string, string) {
