@@ -43,6 +43,9 @@ type Interpreter interface {
 	RegisterProc(string, string, string) error
 	UnregisterProc(string) error
 	Rename(string, string)
+
+	RegisterNS(string, string) error
+	UnregisterNS(string) error
 }
 
 func makeEnsemble(name string, set map[string]CommandFunc) CommandFunc {

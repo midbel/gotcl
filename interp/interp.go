@@ -43,6 +43,14 @@ func New() stdlib.Interpreter {
 	return i
 }
 
+func (i *Interp) RegisterNS(name, script string) error {
+	return nil
+}
+
+func (i *Interp) UnregisterNS(name string) error {
+	return nil
+}
+
 func (i *Interp) CmdDepth() int {
 	return i.Env.Depth()
 }

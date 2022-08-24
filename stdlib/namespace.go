@@ -2,6 +2,8 @@ package stdlib
 
 import (
 	"flag"
+
+	"github.com/midbel/slices"
 )
 
 func RunNamespace() CommandFunc {
@@ -26,8 +28,7 @@ func runEvalNS(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	return "", err
+	return "", i.RegisterNS(slices.Fst(args), slices.Snd(args))
 }
 
 func runDeleteNS(i Interpreter, args []string) (string, error) {
@@ -37,7 +38,7 @@ func runDeleteNS(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "", err
+	return "", i.UnregisterNS(slices.Fst(args))
 }
 
 func runExistNS(i Interpreter, args []string) (string, error) {
