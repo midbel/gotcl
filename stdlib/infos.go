@@ -43,7 +43,7 @@ func RunInfos() CommandFunc {
 }
 
 func runCommands(i Interpreter, args []string) (string, error) {
-	return "", nil
+	return "", ErrImplemented
 }
 
 func runCmdCount(i Interpreter, args []string) (string, error) {
@@ -54,7 +54,6 @@ func runCmdCount(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return introspectCmd(i, func(ci CommandIntrospecter) (string, error) {
-		fmt.Println("cmdcount", ci.CmdCount())
 		n := strconv.Itoa(ci.CmdCount())
 		return n, nil
 	})
@@ -68,7 +67,6 @@ func runCmdDepth(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return introspectCmd(i, func(ci CommandIntrospecter) (string, error) {
-		fmt.Println("cmddepth")
 		n := strconv.Itoa(ci.CmdDepth())
 		return n, nil
 	})
