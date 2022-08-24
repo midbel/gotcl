@@ -40,8 +40,8 @@ type Interpreter interface {
 	Print(string, string) error
 	Println(string, string) error
 
-	Register(string, string, string) error
-	Unregister(string) error
+	RegisterProc(string, string, string) error
+	UnregisterProc(string) error
 	Rename(string, string)
 }
 

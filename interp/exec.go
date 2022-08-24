@@ -10,8 +10,12 @@ import (
 
 type CommandSet map[string]stdlib.Executer
 
+func EmptySet() CommandSet {
+	return make(CommandSet)
+}
+
 func DefaultSet() CommandSet {
-	set := make(CommandSet)
+	set := EmptySet()
 
 	set.registerCmd("set", stdlib.RunSet)
 	set.registerCmd("unset", stdlib.RunUnset)
@@ -23,6 +27,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("info", stdlib.RunInfos())
 	set.registerCmd("string", stdlib.RunString())
 	set.registerCmd("clock", stdlib.RunClock())
+	set.registerCmd("namespace", stdlib.RunNamespace())
 	set.registerCmd("file", stdlib.RunFile())
 	set.registerCmd("exit", stdlib.RunExit)
 	set.registerCmd("time", stdlib.RunTime)
@@ -131,12 +136,12 @@ func (cs CommandSet) Rename(prev, next string) {
 	cs[next] = cmd
 }
 
-func (cs CommandSet) Unregister(name string) error {
+func (cs CommandSet) UnregisterProc(name string) error {
 	delete(cs, name)
 	return nil
 }
 
-func (cs CommandSet) Register(name, args, body string) error {
+func (cs CommandSet) RegisterProc(name, args, body string) error {
 	p, err := createProcedure(args, body)
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
