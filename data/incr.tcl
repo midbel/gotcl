@@ -79,3 +79,15 @@ proc incrOuterBis {} {
 }
 incrOuterBis
 puts "outside incrOuterBis: $outer"
+
+namespace eval engine {
+
+  proc up{} {
+    puts "up"
+  }
+
+  proc down{} {
+    puts "down"
+  }
+  
+}

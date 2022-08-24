@@ -21,6 +21,10 @@ func RunNamespace() CommandFunc {
 	return makeEnsemble("namespace", set)
 }
 
+func RunVariable(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
 func runEvalNS(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("eval", args, func(_ *flag.FlagSet) (int, bool) {
 		return 2, true

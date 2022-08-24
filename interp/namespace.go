@@ -10,10 +10,21 @@ type Namespace struct {
 	*Env
 }
 
+func Global() *Namespace {
+	return &Namespace{
+		CommandSet: DefaultSet(),
+		Env:        Environ(),
+	}
+}
+
 func Prepare(name string) *Namespace {
 	return &Namespace{
 		Name:       name,
 		CommandSet: EmptySet(),
 		Env:        Environ(),
 	}
+}
+
+func (ns *Namespace) Root() bool {
+	return ns.Parent == nil
 }

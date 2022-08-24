@@ -26,8 +26,8 @@ const (
 )
 
 type Interp struct {
-	*Env
 	*FileSet
+	*Env
 	CommandSet
 
 	Echo  bool

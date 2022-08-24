@@ -28,6 +28,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("string", stdlib.RunString())
 	set.registerCmd("clock", stdlib.RunClock())
 	set.registerCmd("namespace", stdlib.RunNamespace())
+	set.registerCmd("variable", stdlib.RunVariable)
 	set.registerCmd("file", stdlib.RunFile())
 	set.registerCmd("exit", stdlib.RunExit)
 	set.registerCmd("time", stdlib.RunTime)
