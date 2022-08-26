@@ -180,7 +180,7 @@ func (i *Interp) Resolve(name string) (string, error) {
 	case tclver:
 		return i.Version(), nil
 	default:
-		return i.Env.Resolve(name)
+		return i.resolve(name)
 	}
 }
 
@@ -333,6 +333,23 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 		err = fmt.Errorf("%s: %w", c.Cmd, err)
 	}
 	return res, err
+}
+
+func (i *Interp) resolve(name string) (string, error) {
+	v, err := i.Env.Resolve(name)
+	if err == nil {
+		return v, err
+	}
+	names := strings.Split(name, "::")
+	if len(names) == 1 {
+		return i.Namespace.env.Resolve(name)
+	}
+	name = names[len(names)-1]
+	ns, err := i.lookupNS(strings.Join(names[:len(names)-1], "::"))
+	if err != nil {
+		return "", err
+	}
+	return ns.env.Resolve(name)
 }
 
 func (i *Interp) lookupNS(name string) (*Namespace, error) {

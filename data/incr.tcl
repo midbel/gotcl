@@ -85,9 +85,12 @@ puts "children: [namespace children]"
 
 namespace eval engine {
   puts "start eval engine"
+
+  variable speed 10
+
   proc up {} {
     puts "engine::up: current: [namespace current] - parent: [namespace parent]"
-    puts "engine::up"
+    puts "engine::up: $speed"
     down
   }
 
@@ -100,6 +103,7 @@ namespace eval engine {
 
 namespace eval motor {
   puts "start eval motor"
+
   proc up {} {
     puts "motor::up: current: [namespace current] - parent: [namespace parent]"
     puts "motor:up"
@@ -107,6 +111,21 @@ namespace eval motor {
     puts "motor::up: current: [namespace current] - parent: [namespace parent]"
   }
   puts "done eval motor"
+}
+
+namespace eval root {
+  namespace eval nested1 {
+    proc nesting { level 100 } {
+      puts "root::nested::nesting: $level"
+      puts "[namespace current] [namespace parent]"
+    }
+  }
+  namespace eval nested2 {
+    proc nesting { level 500 } {
+      puts "root::nested::nesting: $level"
+      puts "[namespace current] [namespace parent]"
+    }
+  }
 }
 
 puts "call engine::up"
@@ -121,3 +140,7 @@ puts "call motor::up"
 puts "==============="
 puts [namespace parent ::tcl::mathop]
 puts [namespace children ::tcl]
+
+puts "==============="
+::root::nested1::nesting 1000
+::root::nested2::nesting 50
