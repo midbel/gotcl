@@ -26,7 +26,7 @@ func RunVariable(i Interpreter, args []string) (string, error) {
 	return "", ErrImplemented
 }
 
-func RunUnknownNS(i Interpreter, args []string) (string, error) {
+func runUnknownNS(i Interpreter, args []string) (string, error) {
 	return "", ErrImplemented
 }
 

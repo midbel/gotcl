@@ -184,6 +184,10 @@ func RunProc(i Interpreter, args []string) (string, error) {
 	return "", err
 }
 
+func RunUnknown(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
 func runLoop(i Interpreter, test, next, body string) (string, error) {
 	var res string
 	for {

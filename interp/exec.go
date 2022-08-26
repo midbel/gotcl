@@ -82,6 +82,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("tell", stdlib.RunTell)
 	set.registerCmd("gets", stdlib.RunGets)
 	set.registerCmd("read", stdlib.RunRead)
+	set.registerCmd("unknown", stdlib.RunUnknown)
 
 	return set
 }
