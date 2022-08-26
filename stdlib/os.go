@@ -30,7 +30,7 @@ func RunChdir(i Interpreter, args []string) (string, error) {
 }
 
 func RunPid(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("pid", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("pid", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
@@ -41,7 +41,7 @@ func RunPid(i Interpreter, args []string) (string, error) {
 }
 
 func RunPwd(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("pwd", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("pwd", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
