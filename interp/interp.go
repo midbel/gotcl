@@ -49,7 +49,7 @@ func (i *Interp) RegisterNS(name, script string) error {
 	if len(names) == 0 {
 		return fmt.Errorf("invalid name for namespace")
 	}
-	ns, err := i.Namespace.Get(names)
+	ns, err := i.Namespace.GetOrCreate(names)
 	if err != nil {
 		return err
 	}
@@ -209,11 +209,22 @@ func (i *Interp) execute(r io.Reader) (string, error) {
 }
 
 func (i *Interp) executeCmd(c *Command) (string, error) {
-	exec, err := i.Command(strings.Split(c.Cmd, "::"))
+	names := strings.Split(c.Cmd, "::")
+	exec, err := i.Command(names)
 	if err != nil {
 		return i.executeExt(c)
 	}
 	if _, ok := exec.(procedure); ok {
+		sub, err := i.Namespace.Get(names[:len(names)-1])
+		if err != nil {
+			return "", err
+		}
+		old := i.Namespace
+		defer func() {
+			i.Namespace = old
+		}()
+		i.Namespace = sub
+		
 		i.Env.Append()
 		defer i.Env.Pop()
 	}

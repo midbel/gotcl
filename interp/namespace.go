@@ -45,11 +45,9 @@ func (ns *Namespace) Root() bool {
 }
 
 func (ns *Namespace) Command(names []string) (stdlib.Executer, error) {
-	if names[0] == "" && !ns.Root() {
-		return nil, fmt.Errorf("relative search from non root namespace")
-	}
-	if names[0] == "" {
-		names = names[1:]
+	names, err := ns.validLookup(names)
+	if err != nil {
+		return nil, err
 	}
 	if len(names) == 1 {
 		exec, err := ns.Lookup(names[0])
@@ -81,6 +79,27 @@ func (ns *Namespace) RegisterProc(name, args, body string) error {
 }
 
 func (ns *Namespace) Get(names []string) (*Namespace, error) {
+	if len(names) == 0 {
+		if ns.Root() {
+			return ns, nil
+		}
+		return ns, nil
+	}
+	names, err := ns.validLookup(names)
+	if err != nil {
+		return nil, err
+	}
+	sub, _, err := ns.getNS(names[0])
+	if err != nil {
+		return nil, err
+	}
+	if len(names) > 1 {
+		return sub.Get(names[1:])
+	}
+	return sub, nil
+}
+
+func (ns *Namespace) GetOrCreate(names []string) (*Namespace, error) {
 	sub, i, err := ns.getNS(names[0])
 	if err == nil {
 		if len(names) == 1 {
@@ -105,6 +124,16 @@ func (ns *Namespace) getNS(name string) (*Namespace, int, error) {
 		return ns.Children[i], i, nil
 	}
 	return nil, i, fmt.Errorf("%s: namespace not defined", name)
+}
+
+func (ns *Namespace) validLookup(names []string) ([]string, error) {
+	if names[0] != "" {
+		return names, nil
+	}
+	if !ns.Root() {
+		return names, fmt.Errorf("absolute namespace path from non root namespace!")
+	}
+	return names[1:], nil
 }
 
 func create(name string, set CommandSet) *Namespace {
