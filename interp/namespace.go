@@ -19,7 +19,21 @@ type Namespace struct {
 }
 
 func Global() *Namespace {
-	return create("", DefaultSet())
+	root := create("", DefaultSet())
+	tcl := create("tcl", EmptySet())
+	tcl.Parent = root
+
+	mop := Mathop()
+	mop.Parent = tcl
+
+	tcl.Children = append(tcl.Children, mop)
+	root.Children = append(root.Children, tcl)
+
+	return root
+}
+
+func Mathop() *Namespace {
+	return create("mathop", MathopSet())
 }
 
 func Prepare(name string) *Namespace {
@@ -31,8 +45,18 @@ func (ns *Namespace) Root() bool {
 }
 
 func (ns *Namespace) Command(names []string) (stdlib.Executer, error) {
+	if names[0] == "" && !ns.Root() {
+		return nil, fmt.Errorf("relative search from non root namespace")
+	}
+	if names[0] == "" {
+		names = names[1:]
+	}
 	if len(names) == 1 {
-		return ns.Lookup(names[0])
+		exec, err := ns.Lookup(names[0])
+		if err != nil && !ns.Root() {
+			return ns.Parent.Command(names)
+		}
+		return exec, err
 	}
 	sub, _, err := ns.getNS(names[0])
 	if err != nil {
@@ -75,9 +99,9 @@ func (ns *Namespace) Get(names []string) (*Namespace, error) {
 
 func (ns *Namespace) getNS(name string) (*Namespace, int, error) {
 	i := sort.Search(len(ns.Children), func(i int) bool {
-		return ns.Children[i].Name >= name
+		return name >= ns.Children[i].Name
 	})
-	if i < 0 && ns.Children[i].Name == name {
+	if i < len(ns.Children) && ns.Children[i].Name == name {
 		return ns.Children[i], i, nil
 	}
 	return nil, i, fmt.Errorf("%s: namespace not defined", name)

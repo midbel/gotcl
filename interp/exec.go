@@ -8,10 +8,30 @@ import (
 	"github.com/midbel/gotcl/stdlib"
 )
 
+const MaxArity = 255
+
 type CommandSet map[string]stdlib.Executer
 
 func EmptySet() CommandSet {
 	return make(CommandSet)
+}
+
+func MathopSet() CommandSet {
+	set := EmptySet()
+	set.registerCmd("!", stdlib.RunNot)
+	set.registerCmd("+", stdlib.RunAdd)
+	set.registerCmd("-", stdlib.RunSub)
+	set.registerCmd("*", stdlib.RunMul)
+	set.registerCmd("**", stdlib.RunPow)
+	set.registerCmd("/", stdlib.RunDiv)
+	set.registerCmd("%", stdlib.RunMod)
+	set.registerCmd("==", stdlib.RunEq)
+	set.registerCmd("!=", stdlib.RunNe)
+	set.registerCmd("<", stdlib.RunLt)
+	set.registerCmd("<=", stdlib.RunLe)
+	set.registerCmd(">", stdlib.RunGt)
+	set.registerCmd(">=", stdlib.RunGe)
+	return set
 }
 
 func DefaultSet() CommandSet {
@@ -46,19 +66,6 @@ func DefaultSet() CommandSet {
 	set.registerCmd("switch", stdlib.RunSwitch)
 	set.registerCmd("break", stdlib.RunBreak)
 	set.registerCmd("continue", stdlib.RunContinue)
-	set.registerCmd("::tcl::mathop::!", stdlib.RunNot)
-	set.registerCmd("::tcl::mathop::+", stdlib.RunAdd)
-	set.registerCmd("::tcl::mathop::-", stdlib.RunSub)
-	set.registerCmd("::tcl::mathop::*", stdlib.RunMul)
-	set.registerCmd("::tcl::mathop::**", stdlib.RunPow)
-	set.registerCmd("::tcl::mathop::/", stdlib.RunDiv)
-	set.registerCmd("::tcl::mathop::%", stdlib.RunMod)
-	set.registerCmd("::tcl::mathop::==", stdlib.RunEq)
-	set.registerCmd("::tcl::mathop::!=", stdlib.RunNe)
-	set.registerCmd("::tcl::mathop::<", stdlib.RunLt)
-	set.registerCmd("::tcl::mathop::<=", stdlib.RunLe)
-	set.registerCmd("::tcl::mathop::>", stdlib.RunGt)
-	set.registerCmd("::tcl::mathop::>=", stdlib.RunGe)
 	set.registerCmd("open", stdlib.RunOpen)
 	set.registerCmd("close", stdlib.RunClose)
 	set.registerCmd("eof", stdlib.RunEof)
@@ -210,6 +217,9 @@ func createProcedure(args, body string) (procedure, error) {
 			var a argument
 			args, a.Name, a.Default = splitArg(args)
 			proc.Args = append(proc.Args, a)
+			if len(proc.Args) >= MaxArity {
+				return proc, fmt.Errorf("too many arguments given (max: %d)!", MaxArity)
+			}
 			if a.Name == "" && a.Default == "" {
 				return proc, fmt.Errorf("syntax error")
 			}

@@ -83,6 +83,7 @@ puts "outside incrOuterBis: $outer"
 namespace eval engine {
   proc up {} {
     puts "engine::up"
+    down
   }
 
   proc down {} {
@@ -90,5 +91,12 @@ namespace eval engine {
   }
 }
 
-::engine::up()
-::engine::down()
+namespace eval motor {
+  proc up {} {
+    puts "motor:up"
+  }
+}
+
+::engine::up
+::engine::down
+::motor::up
