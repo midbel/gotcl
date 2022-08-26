@@ -122,7 +122,7 @@ func matchRange(str string, rs *strings.Reader) (int, bool) {
 		}
 	)
 	for rs.Len() > 0 {
-		r, _, err = rs.ReadRune()
+		r, _, _ = rs.ReadRune()
 		if r == rsquare {
 			return z, false
 		}

@@ -337,6 +337,9 @@ func RunNot(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	res, err := strconv.ParseFloat(slices.Fst(args), 64)
+	if err != nil {
+		return "", err
+	}
 	if res == 0 {
 		return conv.False(), nil
 	}

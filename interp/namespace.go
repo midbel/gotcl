@@ -142,7 +142,7 @@ func (ns *Namespace) GetOrCreate(names []string) (*Namespace, error) {
 		if len(names) == 1 {
 			return sub, nil
 		}
-		return sub.Get(names[1:])
+		return sub.GetOrCreate(names[1:])
 	}
 	var (
 		curr = Prepare(names[0])

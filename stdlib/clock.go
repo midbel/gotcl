@@ -29,7 +29,7 @@ func runTimeAdd(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "", nil
+	return "", ErrImplemented
 }
 
 func runTimeFormat(i Interpreter, args []string) (string, error) {
@@ -61,7 +61,7 @@ func runTimeScan(i Interpreter, args []string) (string, error) {
 }
 
 func runTimeClicks(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("clicks", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("clicks", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
@@ -72,7 +72,7 @@ func runTimeClicks(i Interpreter, args []string) (string, error) {
 }
 
 func runSeconds(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("seconds", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("seconds", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
@@ -83,7 +83,7 @@ func runSeconds(i Interpreter, args []string) (string, error) {
 }
 
 func runMillisSeconds(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("milliseconds", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("milliseconds", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
@@ -97,7 +97,7 @@ func runMillisSeconds(i Interpreter, args []string) (string, error) {
 }
 
 func runMicrosSeconds(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("microseconds", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("microseconds", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {

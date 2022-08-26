@@ -91,6 +91,9 @@ func RunSeek(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	offset, err := strconv.Atoi(slices.Snd(args))
+	if err != nil {
+		return "", err
+	}
 	var whence int
 	switch slices.Lst(args) {
 	case "start", "":

@@ -114,7 +114,9 @@ func RunSwitch(i Interpreter, args []string) (string, error) {
 }
 
 func RunBreak(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("break", args, nil)
+	_, err := parseArgs("break", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, true
+	})
 	if err != nil {
 		return "", err
 	}
@@ -122,7 +124,9 @@ func RunBreak(i Interpreter, args []string) (string, error) {
 }
 
 func RunContinue(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("continue", args, nil)
+	_, err := parseArgs("continue", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, true
+	})
 	if err != nil {
 		return "", err
 	}
@@ -130,7 +134,9 @@ func RunContinue(i Interpreter, args []string) (string, error) {
 }
 
 func RunReturn(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("return", args, nil)
+	_, err := parseArgs("return", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, true
+	})
 	if err != nil {
 		return "", err
 	}

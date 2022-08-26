@@ -64,17 +64,23 @@ func runCopy(i Interpreter, args []string) (string, error) {
 
 func runMove(i Interpreter, args []string) (string, error) {
 	var force bool
-	args, err := parseArgs("move", args, func(set *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("move", args, func(set *flag.FlagSet) (int, bool) {
 		set.BoolVar(&force, "force", force, "force")
 		return 1, false
 	})
 	if err != nil {
 		return "", err
 	}
-	return "", nil
+	return "", ErrImplemented
 }
 
 func runDelete(i Interpreter, args []string) (string, error) {
+	args, err := parseArgs("delete", args, func(set *flag.FlagSet) (int, bool) {
+		return 1, true
+	})
+	if err != nil {
+		return "", err
+	}
 	return "", os.RemoveAll(slices.Fst(args))
 }
 
@@ -109,7 +115,7 @@ func runLink(i Interpreter, args []string) (string, error) {
 	} else {
 		err = os.Symlink(slices.Snd(args), slices.Fst(args))
 	}
-	return slices.Snd(args), nil
+	return slices.Snd(args), err
 }
 
 func runReadLink(i Interpreter, args []string) (string, error) {

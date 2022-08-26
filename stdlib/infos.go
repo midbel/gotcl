@@ -47,7 +47,7 @@ func runCommands(i Interpreter, args []string) (string, error) {
 }
 
 func runCmdCount(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("cmdcount", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("cmdcount", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
@@ -60,7 +60,7 @@ func runCmdCount(i Interpreter, args []string) (string, error) {
 }
 
 func runCmdDepth(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("level", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("level", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, false
 	})
 	if err != nil {
@@ -155,7 +155,7 @@ func runVars(i Interpreter, args []string) (string, error) {
 }
 
 func runExecutable(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("nameofexecutable", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("nameofexecutable", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
@@ -169,7 +169,7 @@ func runExecutable(i Interpreter, args []string) (string, error) {
 }
 
 func runHost(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("hostname", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("hostname", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
@@ -194,7 +194,7 @@ func runExists(i Interpreter, args []string) (string, error) {
 }
 
 func runVersion(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("version", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("version", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
