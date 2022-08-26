@@ -94,9 +94,15 @@ namespace eval engine {
 namespace eval motor {
   proc up {} {
     puts "motor:up"
+    ::engine::down
   }
 }
 
+puts "call engine::up"
 ::engine::up
+puts "========="
+puts "call engine::down"
 ::engine::down
+puts "========="
+puts "call motor::up"
 ::motor::up

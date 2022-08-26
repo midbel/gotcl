@@ -14,8 +14,9 @@ type Namespace struct {
 	Children []*Namespace
 	Exported []string
 
-	CommandSet
 	env env.Environment
+	CommandSet
+	Unknown stdlib.Executer
 }
 
 func Global() *Namespace {

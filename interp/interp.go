@@ -29,6 +29,7 @@ type Interp struct {
 	*FileSet
 	*Env
 
+	root *Namespace
 	*Namespace
 
 	Echo  bool
@@ -37,10 +38,11 @@ type Interp struct {
 
 func New() stdlib.Interpreter {
 	i := &Interp{
-		FileSet:   Stdio(),
-		Env:       Environ(),
-		Namespace: Global(),
+		FileSet: Stdio(),
+		Env:     Environ(),
+		root:    Global(),
 	}
+	i.Namespace = i.root
 	return i
 }
 
@@ -209,13 +211,28 @@ func (i *Interp) execute(r io.Reader) (string, error) {
 }
 
 func (i *Interp) executeCmd(c *Command) (string, error) {
-	names := strings.Split(c.Cmd, "::")
-	exec, err := i.Command(names)
+	var (
+		names = strings.Split(c.Cmd, "::")
+		exec  stdlib.Executer
+		root  bool
+		err   error
+	)
+	if len(names) > 0 && names[0] == "" {
+		exec, err = i.root.Command(names[1:])
+		root = true
+	} else {
+		exec, err = i.Command(names)
+	}
 	if err != nil {
 		return i.executeExt(c)
 	}
 	if _, ok := exec.(procedure); ok {
-		sub, err := i.Namespace.Get(names[:len(names)-1])
+		var sub *Namespace
+		if root {
+			sub, err = i.root.Get(names[:len(names)-1])
+		} else {
+			sub, err = i.Namespace.Get(names[:len(names)-1])
+		}
 		if err != nil {
 			return "", err
 		}
@@ -224,7 +241,7 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 			i.Namespace = old
 		}()
 		i.Namespace = sub
-		
+
 		i.Env.Append()
 		defer i.Env.Pop()
 	}
