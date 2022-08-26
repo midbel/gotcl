@@ -2,6 +2,7 @@ package stdlib
 
 import (
 	"flag"
+	"strings"
 
 	"github.com/midbel/slices"
 )
@@ -67,7 +68,7 @@ func runCurrentNS(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "", err
+	return i.CurrentNS(), err
 }
 
 func runParentNS(i Interpreter, args []string) (string, error) {
@@ -77,7 +78,7 @@ func runParentNS(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "", err
+	return i.ParentNS(), err
 }
 
 func runChildrenNS(i Interpreter, args []string) (string, error) {
@@ -87,7 +88,7 @@ func runChildrenNS(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "", err
+	return strings.Join(i.ChildrenNS(), " "), err
 }
 
 func runExportNS(i Interpreter, args []string) (string, error) {

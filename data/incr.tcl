@@ -80,22 +80,33 @@ proc incrOuterBis {} {
 incrOuterBis
 puts "outside incrOuterBis: $outer"
 
+puts "current: [namespace current]"
+puts "children: [namespace children]"
+
 namespace eval engine {
+  puts "start eval engine"
   proc up {} {
+    puts "engine::up: current: [namespace current] - parent: [namespace parent]"
     puts "engine::up"
     down
   }
 
   proc down {} {
+    puts "engine::down: current: [namespace current] - parent: [namespace parent]"
     puts "engine::down"
   }
+  puts "done eval engine"
 }
 
 namespace eval motor {
+  puts "start eval motor"
   proc up {} {
+    puts "motor::up: current: [namespace current] - parent: [namespace parent]"
     puts "motor:up"
     ::engine::down
+    puts "motor::up: current: [namespace current] - parent: [namespace parent]"
   }
+  puts "done eval motor"
 }
 
 puts "call engine::up"

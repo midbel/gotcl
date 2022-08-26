@@ -45,6 +45,31 @@ func New() stdlib.Interpreter {
 	return i
 }
 
+func (i *Interp) CurrentNS() string {
+	if i.Namespace.Root() {
+		return "global"
+	}
+	return i.Namespace.Name
+}
+
+func (i *Interp) ParentNS() string {
+	if i.Namespace.Root() {
+		return ""
+	}
+	if i.Namespace.Parent.Root() {
+		return "global"
+	}
+	return i.Namespace.Parent.Name
+}
+
+func (i *Interp) ChildrenNS() []string {
+	var ns []string
+	for _, c := range i.Namespace.Children {
+		ns = append(ns, c.Name)
+	}
+	return ns
+}
+
 func (i *Interp) RegisterNS(name, script string) error {
 	names := strings.Split(name, "::")
 	if len(names) == 0 {
@@ -225,12 +250,13 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 	if err != nil {
 		var cerr *CmdError
 		if errors.As(err, &cerr) && cerr.Unknown != nil {
-			return cerr.Unknown.Execute(i, c.Args)
+			args := []string{c.Cmd}
+			return cerr.Unknown.Execute(i, append(args, c.Args...))
 		}
 		return "", err
 	}
-	var sub *Namespace
 	if _, ok := exec.(procedure); ok {
+		var sub *Namespace
 		if ns := names[:len(names)-1]; root {
 			sub, err = i.root.Get(ns)
 		} else {
@@ -241,14 +267,13 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 		}
 		i.Env.Append()
 		defer i.Env.Pop()
-	} else {
-		sub = i.root
+
+		old := i.Namespace
+		defer func() {
+			i.Namespace = old
+		}()
+		i.Namespace = sub
 	}
-	old := i.Namespace
-	defer func() {
-		i.Namespace = old
-	}()
-	i.Namespace = sub
 
 	res, err := exec.Execute(i, c.Args)
 	if err != nil {
