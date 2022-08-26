@@ -10,6 +10,130 @@ import (
 	"github.com/midbel/slices"
 )
 
+func RunAbs(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunAcos(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunAsin(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunAtan(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunAtan2(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunCos(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunCosh(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunSin(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunSinh(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunTan(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunTanh(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunHypot(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunBool(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunDouble(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunEntier(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunCeil(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunFloor(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunRound(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunFmod(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunInt(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunExp(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunLog(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunLog10(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunMax(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunMin(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunRaise(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunRand(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunSrand(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunIsqrt(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunSqrt(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunWide(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
 func RunIncr(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("incr", args, func(_ *flag.FlagSet) (int, bool) {
 		return 1, false
@@ -212,7 +336,11 @@ func RunNot(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "", nil
+	res, err := strconv.ParseFloat(slices.Fst(args), 64)
+	if res == 0 {
+		return conv.False(), nil
+	}
+	return conv.True(), nil
 }
 
 type compFunc func(float64, float64) (bool, error)

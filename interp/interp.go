@@ -46,6 +46,21 @@ func New() stdlib.Interpreter {
 	return i
 }
 
+func (i *Interp) DefineVar(name, value string) error {
+	if i.Namespace.Root() {
+		return fmt.Errorf("variable can not be defined in global namespace")
+	}
+	i.Namespace.env.Define(name, value)
+	return nil
+}
+
+func (i *Interp) ResolveVar(name string) (string, error) {
+	if i.Namespace.Root() {
+		return "", fmt.Errorf("variable can not be resolved in global namespace")
+	}
+	return i.Namespace.env.Resolve(name)
+}
+
 func (i *Interp) ExistsNS(name string) bool {
 	if name == "" {
 		return true

@@ -17,6 +17,18 @@ var (
 	ErrContinue = errors.New("continue")
 )
 
+func RunTry(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunCatch(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunError(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
 func RunFor(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("for", args, func(_ *flag.FlagSet) (int, bool) {
 		return 4, true

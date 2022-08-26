@@ -22,6 +22,38 @@ func EmptySet() CommandSet {
 
 func MathfuncSet() CommandSet {
 	set := EmptySet()
+
+	set.registerCmd("abs", stdlib.RunAbs)
+	set.registerCmd("acos", stdlib.RunAcos)
+	set.registerCmd("asin", stdlib.RunAsin)
+	set.registerCmd("atan", stdlib.RunAtan)
+	set.registerCmd("atan2", stdlib.RunAtan2)
+	set.registerCmd("cos", stdlib.RunCos)
+	set.registerCmd("cosh", stdlib.RunCosh)
+	set.registerCmd("sin", stdlib.RunSin)
+	set.registerCmd("sinh", stdlib.RunSinh)
+	set.registerCmd("tan", stdlib.RunTan)
+	set.registerCmd("tanh", stdlib.RunTanh)
+	set.registerCmd("hypot", stdlib.RunHypot)
+	set.registerCmd("bool", stdlib.RunBool)
+	set.registerCmd("double", stdlib.RunDouble)
+	set.registerCmd("entier", stdlib.RunEntier)
+	set.registerCmd("ceil", stdlib.RunCeil)
+	set.registerCmd("floor", stdlib.RunFloor)
+	set.registerCmd("round", stdlib.RunRound)
+	set.registerCmd("fmod", stdlib.RunFmod)
+	set.registerCmd("int", stdlib.RunInt)
+	set.registerCmd("exp", stdlib.RunExp)
+	set.registerCmd("log", stdlib.RunLog)
+	set.registerCmd("log10", stdlib.RunLog10)
+	set.registerCmd("max", stdlib.RunMax)
+	set.registerCmd("min", stdlib.RunMin)
+	set.registerCmd("pow", stdlib.RunRaise)
+	set.registerCmd("rand", stdlib.RunRand)
+	set.registerCmd("srand", stdlib.RunSrand)
+	set.registerCmd("isqrt", stdlib.RunIsqrt)
+	set.registerCmd("sqrt", stdlib.RunSqrt)
+
 	return set
 }
 
@@ -83,6 +115,9 @@ func DefaultSet() CommandSet {
 	set.registerCmd("gets", stdlib.RunGets)
 	set.registerCmd("read", stdlib.RunRead)
 	set.registerCmd("unknown", stdlib.RunUnknown)
+	set.registerCmd("try", stdlib.RunTry)
+	set.registerCmd("catch", stdlib.RunCatch)
+	set.registerCmd("error", stdlib.RunError)
 
 	return set
 }
