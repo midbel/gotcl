@@ -78,7 +78,7 @@ func (cs CommandSet) Lookup(name string) (stdlib.Executer, error) {
 	return exec, nil
 }
 
-func (cs CommandSet) List(pat string) []string {
+func (cs CommandSet) ProcList(pat string) []string {
 	list := make([]string, 0, len(cs))
 	for k, e := range cs {
 		if _, ok := e.(procedure); !ok {
@@ -89,7 +89,7 @@ func (cs CommandSet) List(pat string) []string {
 	return list
 }
 
-func (cs CommandSet) Args(proc string) ([]string, error) {
+func (cs CommandSet) ProcArgs(proc string) ([]string, error) {
 	p, err := cs.find(proc)
 	if err != nil {
 		return nil, err
@@ -101,12 +101,12 @@ func (cs CommandSet) Args(proc string) ([]string, error) {
 	return args, nil
 }
 
-func (cs CommandSet) Body(proc string) (string, error) {
+func (cs CommandSet) ProcBody(proc string) (string, error) {
 	p, err := cs.find(proc)
 	return p.Body, err
 }
 
-func (cs CommandSet) Default(proc, arg string) (string, bool, error) {
+func (cs CommandSet) ProcDefault(proc, arg string) (string, bool, error) {
 	p, err := cs.find(proc)
 	if err != nil {
 		return "", false, err

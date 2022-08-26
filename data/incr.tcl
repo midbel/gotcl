@@ -81,13 +81,14 @@ incrOuterBis
 puts "outside incrOuterBis: $outer"
 
 namespace eval engine {
-
-  proc up{} {
-    puts "up"
+  proc up {} {
+    puts "engine::up"
   }
 
-  proc down{} {
-    puts "down"
+  proc down {} {
+    puts "engine::down"
   }
-  
 }
+
+::engine::up()
+::engine::down()

@@ -28,7 +28,8 @@ const (
 type Interp struct {
 	*FileSet
 	*Env
-	CommandSet
+
+	*Namespace
 
 	Echo  bool
 	Count int
@@ -36,15 +37,29 @@ type Interp struct {
 
 func New() stdlib.Interpreter {
 	i := &Interp{
-		CommandSet: DefaultSet(),
-		FileSet:    Stdio(),
-		Env:        Environ(),
+		FileSet:   Stdio(),
+		Env:       Environ(),
+		Namespace: Global(),
 	}
 	return i
 }
 
 func (i *Interp) RegisterNS(name, script string) error {
-	return nil
+	names := strings.Split(name, "::")
+	if len(names) == 0 {
+		return fmt.Errorf("invalid name for namespace")
+	}
+	ns, err := i.Namespace.Get(names)
+	if err != nil {
+		return err
+	}
+	old := i.Namespace
+	defer func() {
+		i.Namespace = old
+	}()
+	i.Namespace = ns
+	_, err = i.Execute(strings.NewReader(script))
+	return err
 }
 
 func (i *Interp) UnregisterNS(name string) error {
@@ -194,7 +209,7 @@ func (i *Interp) execute(r io.Reader) (string, error) {
 }
 
 func (i *Interp) executeCmd(c *Command) (string, error) {
-	exec, err := i.Lookup(c.Cmd)
+	exec, err := i.Command(strings.Split(c.Cmd, "::"))
 	if err != nil {
 		return i.executeExt(c)
 	}
