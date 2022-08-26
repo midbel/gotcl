@@ -100,6 +100,21 @@ func (ns *Namespace) RegisterProc(name, args, body string) error {
 	return ns.CommandSet.RegisterProc(name, args, body)
 }
 
+func (ns *Namespace) FQN() string {
+	if ns.Root() {
+		return "::"
+	}
+	if ns.Parent.Root() {
+		return "::" + ns.Name
+	}
+	return ns.Parent.FQN() + "::" + ns.Name
+}
+
+func (ns *Namespace) Delete(name string) {
+	_, i, _ := ns.getNS(name)
+	ns.Children = append(ns.Children[:i], ns.Children[i+1:]...)
+}
+
 func (ns *Namespace) Get(names []string) (*Namespace, error) {
 	if len(names) == 0 {
 		if ns.Root() {

@@ -211,6 +211,7 @@ func (e executer) Execute(i stdlib.Interpreter, args []string) (string, error) {
 }
 
 type procedure struct {
+	origin   string
 	Body     string
 	variadic bool
 	Args     []argument

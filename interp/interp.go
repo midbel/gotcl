@@ -63,10 +63,7 @@ func (i *Interp) ExistsNS(name string) bool {
 }
 
 func (i *Interp) CurrentNS() string {
-	if i.Namespace.Root() {
-		return "global"
-	}
-	return i.Namespace.Name
+	return i.Namespace.FQN()
 }
 
 func (i *Interp) ParentNS(name string) (string, error) {
@@ -90,10 +87,7 @@ func (i *Interp) ParentNS(name string) (string, error) {
 	if ns.Root() {
 		return "", nil
 	}
-	if ns.Parent.Root() {
-		return "global", nil
-	}
-	return ns.Parent.Name, nil
+	return ns.Parent.FQN(), nil
 }
 
 func (i *Interp) ChildrenNS(name, pat string) ([]string, error) {
@@ -116,7 +110,7 @@ func (i *Interp) ChildrenNS(name, pat string) ([]string, error) {
 	}
 	var list []string
 	for _, c := range ns.Children {
-		list = append(list, c.Name)
+		list = append(list, c.FQN())
 	}
 	return glob.Filter(list, pat), nil
 }
@@ -143,6 +137,23 @@ func (i *Interp) UnregisterNS(name string) error {
 	if name == "" {
 		return nil
 	}
+	var (
+		ns  *Namespace
+		err error
+	)
+	names := strings.Split(name, "::")
+	if len(names) > 0 && names[0] == "" {
+		ns, err = i.root.Get(names[1:])
+	} else {
+		ns, err = i.Namespace.Get(names)
+	}
+	if err != nil {
+		return err
+	}
+	if ns.Root() {
+		return fmt.Errorf("global namespace can not be deleted")
+	}
+	ns.Parent.Delete(ns.Name)
 	return nil
 }
 
