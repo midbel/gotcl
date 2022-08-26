@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -224,37 +223,38 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 		exec, err = i.Command(names)
 	}
 	if err != nil {
-		return i.executeExt(c)
+		var cerr *CmdError
+		if errors.As(err, &cerr) && cerr.Unknown != nil {
+			return cerr.Unknown.Execute(i, c.Args)
+		}
+		return "", err
 	}
+	var sub *Namespace
 	if _, ok := exec.(procedure); ok {
-		var sub *Namespace
-		if root {
-			sub, err = i.root.Get(names[:len(names)-1])
+		if ns := names[:len(names)-1]; root {
+			sub, err = i.root.Get(ns)
 		} else {
-			sub, err = i.Namespace.Get(names[:len(names)-1])
+			sub, err = i.Namespace.Get(ns)
 		}
 		if err != nil {
 			return "", err
 		}
-		old := i.Namespace
-		defer func() {
-			i.Namespace = old
-		}()
-		i.Namespace = sub
-
 		i.Env.Append()
 		defer i.Env.Pop()
+	} else {
+		sub = i.root
 	}
+	old := i.Namespace
+	defer func() {
+		i.Namespace = old
+	}()
+	i.Namespace = sub
+
 	res, err := exec.Execute(i, c.Args)
 	if err != nil {
 		err = fmt.Errorf("%s: %w", c.Cmd, err)
 	}
 	return res, err
-}
-
-func (i *Interp) executeExt(c *Command) (string, error) {
-	res, err := exec.Command(c.Cmd, c.Args...).Output()
-	return string(res), err
 }
 
 func isSpecial(name string) bool {

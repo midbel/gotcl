@@ -17,11 +17,16 @@ func RunNamespace() CommandFunc {
 		"export":   runExportNS,
 		"import":   runImportNS,
 		"forget":   runForgetNS,
+		"unknown":  runUnknownNS,
 	}
 	return makeEnsemble("namespace", set)
 }
 
 func RunVariable(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
+func RunUnknownNS(i Interpreter, args []string) (string, error) {
 	return "", ErrImplemented
 }
 

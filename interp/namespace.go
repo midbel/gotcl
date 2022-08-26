@@ -8,6 +8,15 @@ import (
 	"github.com/midbel/gotcl/stdlib"
 )
 
+type CmdError struct {
+	Err     error
+	Unknown stdlib.Executer
+}
+
+func (c *CmdError) Error() string {
+	return c.Err.Error()
+}
+
 type Namespace struct {
 	Name     string
 	Parent   *Namespace
@@ -20,17 +29,23 @@ type Namespace struct {
 }
 
 func Global() *Namespace {
-	root := create("", DefaultSet())
-	tcl := create("tcl", EmptySet())
-	tcl.Parent = root
+	var (
+		root = create("", DefaultSet())
+		tcl  = create("tcl", EmptySet())
+		mop  = Mathop()
+		mnc  = Mathfunc()
+	)
+	tcl.appendNS(mop)
+	tcl.appendNS(mnc)
+	root.appendNS(tcl)
 
-	mop := Mathop()
-	mop.Parent = tcl
-
-	tcl.Children = append(tcl.Children, mop)
-	root.Children = append(root.Children, tcl)
+	root.Unknown = createExecuter(unknownDefault)
 
 	return root
+}
+
+func Mathfunc() *Namespace {
+	return create("mathfunc", MathfuncSet())
 }
 
 func Mathop() *Namespace {
@@ -54,6 +69,12 @@ func (ns *Namespace) Command(names []string) (stdlib.Executer, error) {
 		exec, err := ns.Lookup(names[0])
 		if err != nil && !ns.Root() {
 			return ns.Parent.Command(names)
+		}
+		if err != nil {
+			err = &CmdError{
+				Err:     fmt.Errorf("%s: %w", names[0], ErrLookup),
+				Unknown: ns.Unknown,
+			}
 		}
 		return exec, err
 	}
@@ -115,6 +136,11 @@ func (ns *Namespace) GetOrCreate(names []string) (*Namespace, error) {
 	curr.Parent = ns
 	ns.Children = append(ns.Children[:i], tmp...)
 	return curr, nil
+}
+
+func (ns *Namespace) appendNS(c *Namespace) {
+	c.Parent = ns
+	ns.Children = append(ns.Children, c)
 }
 
 func (ns *Namespace) getNS(name string) (*Namespace, int, error) {

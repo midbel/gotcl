@@ -1,12 +1,16 @@
 package interp
 
 import (
+	"errors"
 	"fmt"
+	"os/exec"
 	"sort"
 	"strings"
 
 	"github.com/midbel/gotcl/stdlib"
 )
+
+var ErrLookup = errors.New("procedure not defined")
 
 const MaxArity = 255
 
@@ -14,6 +18,11 @@ type CommandSet map[string]stdlib.Executer
 
 func EmptySet() CommandSet {
 	return make(CommandSet)
+}
+
+func MathfuncSet() CommandSet {
+	set := EmptySet()
+	return set
 }
 
 func MathopSet() CommandSet {
@@ -260,4 +269,9 @@ func splitArg(str string) (string, string, string) {
 		str = strings.TrimSpace(rest)
 	}
 	return str, n, d
+}
+
+func unknownDefault(_ stdlib.Interpreter, args []string) (string, error) {
+	res, err := exec.Command(args[0], args[1:]...).Output()
+	return string(res), err
 }
