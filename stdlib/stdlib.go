@@ -47,8 +47,9 @@ type Interpreter interface {
 	RegisterNS(string, string) error
 	UnregisterNS(string) error
 	CurrentNS() string
-	ParentNS() string
-	ChildrenNS() []string
+	ParentNS(string) (string, error)
+	ChildrenNS(string, string) ([]string, error)
+	ExistsNS(string) bool
 }
 
 func makeEnsemble(name string, set map[string]CommandFunc) CommandFunc {

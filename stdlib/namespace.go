@@ -4,6 +4,7 @@ import (
 	"flag"
 	"strings"
 
+	"github.com/midbel/gotcl/stdlib/conv"
 	"github.com/midbel/slices"
 )
 
@@ -58,7 +59,8 @@ func runExistNS(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "", err
+	ok := i.ExistsNS(slices.Fst(args))
+	return conv.Bool(ok), err
 }
 
 func runCurrentNS(i Interpreter, args []string) (string, error) {
@@ -73,22 +75,26 @@ func runCurrentNS(i Interpreter, args []string) (string, error) {
 
 func runParentNS(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("parent", args, func(_ *flag.FlagSet) (int, bool) {
-		return 0, true
+		return 0, false
 	})
 	if err != nil {
 		return "", err
 	}
-	return i.ParentNS(), err
+	return i.ParentNS(slices.Fst(args))
 }
 
 func runChildrenNS(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("children", args, func(_ *flag.FlagSet) (int, bool) {
-		return 0, true
+		return 0, false
 	})
 	if err != nil {
 		return "", err
 	}
-	return strings.Join(i.ChildrenNS(), " "), err
+	list, err := i.ChildrenNS(slices.Fst(args), slices.Snd(args))
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(list, " "), err
 }
 
 func runExportNS(i Interpreter, args []string) (string, error) {

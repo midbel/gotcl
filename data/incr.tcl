@@ -117,3 +117,7 @@ puts "call engine::down"
 puts "========="
 puts "call motor::up"
 ::motor::up
+
+puts "==============="
+puts [namespace parent ::tcl::mathop]
+puts [namespace children ::tcl]

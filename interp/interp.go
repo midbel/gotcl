@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/midbel/gotcl/env"
+	"github.com/midbel/gotcl/glob"
 	"github.com/midbel/gotcl/stdlib"
 	"github.com/midbel/slices"
 )
@@ -45,6 +46,22 @@ func New() stdlib.Interpreter {
 	return i
 }
 
+func (i *Interp) ExistsNS(name string) bool {
+	if name == "" {
+		return true
+	}
+	var (
+		names = strings.Split(name, "::")
+		err   error
+	)
+	if len(names) > 0 && names[0] == "" {
+		_, err = i.root.Get(names[1:])
+	} else {
+		_, err = i.Namespace.Get(names)
+	}
+	return err == nil
+}
+
 func (i *Interp) CurrentNS() string {
 	if i.Namespace.Root() {
 		return "global"
@@ -52,22 +69,56 @@ func (i *Interp) CurrentNS() string {
 	return i.Namespace.Name
 }
 
-func (i *Interp) ParentNS() string {
-	if i.Namespace.Root() {
-		return ""
+func (i *Interp) ParentNS(name string) (string, error) {
+	var (
+		ns  *Namespace
+		err error
+	)
+	if name == "" {
+		ns = i.Namespace
+	} else {
+		names := strings.Split(name, "::")
+		if len(names) > 0 && names[0] == "" {
+			ns, err = i.root.Get(names[1:])
+		} else {
+			ns, err = i.Namespace.Get(names)
+		}
+		if err != nil {
+			return "", err
+		}
 	}
-	if i.Namespace.Parent.Root() {
-		return "global"
+	if ns.Root() {
+		return "", nil
 	}
-	return i.Namespace.Parent.Name
+	if ns.Parent.Root() {
+		return "global", nil
+	}
+	return ns.Parent.Name, nil
 }
 
-func (i *Interp) ChildrenNS() []string {
-	var ns []string
-	for _, c := range i.Namespace.Children {
-		ns = append(ns, c.Name)
+func (i *Interp) ChildrenNS(name, pat string) ([]string, error) {
+	var (
+		ns  *Namespace
+		err error
+	)
+	if name == "" {
+		ns = i.Namespace
+	} else {
+		names := strings.Split(name, "::")
+		if len(names) > 0 && names[0] == "" {
+			ns, err = i.root.Get(names[1:])
+		} else {
+			ns, err = i.Namespace.Get(names)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
-	return ns
+	var list []string
+	for _, c := range ns.Children {
+		list = append(list, c.Name)
+	}
+	return glob.Filter(list, pat), nil
 }
 
 func (i *Interp) RegisterNS(name, script string) error {
@@ -89,6 +140,9 @@ func (i *Interp) RegisterNS(name, script string) error {
 }
 
 func (i *Interp) UnregisterNS(name string) error {
+	if name == "" {
+		return nil
+	}
 	return nil
 }
 
