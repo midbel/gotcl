@@ -312,3 +312,8 @@ func unknownDefault(_ stdlib.Interpreter, args []string) (string, error) {
 	res, err := exec.Command(args[0], args[1:]...).Output()
 	return string(res), err
 }
+
+// type frame struct {
+// 	*Namespace
+// 	env env.Environment
+// }

@@ -46,14 +46,6 @@ func New() stdlib.Interpreter {
 	return i
 }
 
-func (i *Interp) DefineVar(name, value string) error {
-	if i.Namespace.Root() {
-		return fmt.Errorf("variable can not be defined in global namespace")
-	}
-	i.Namespace.env.Define(name, value)
-	return nil
-}
-
 func (i *Interp) ResolveVar(name string) (string, error) {
 	if i.Namespace.Root() {
 		return "", fmt.Errorf("variable can not be resolved in global namespace")
@@ -61,19 +53,19 @@ func (i *Interp) ResolveVar(name string) (string, error) {
 	return i.Namespace.env.Resolve(name)
 }
 
+func (i *Interp) RegisterVar(name, value string) error {
+	if i.Namespace.Root() {
+		return fmt.Errorf("variable can not be defined in global namespace")
+	}
+	i.Namespace.env.Define(name, value)
+	return nil
+}
+
 func (i *Interp) ExistsNS(name string) bool {
 	if name == "" {
 		return true
 	}
-	var (
-		names = strings.Split(name, "::")
-		err   error
-	)
-	if len(names) > 0 && names[0] == "" {
-		_, err = i.root.Get(names[1:])
-	} else {
-		_, err = i.Namespace.Get(names)
-	}
+	_, err := i.lookupNS(name)
 	return err == nil
 }
 
@@ -89,12 +81,7 @@ func (i *Interp) ParentNS(name string) (string, error) {
 	if name == "" {
 		ns = i.Namespace
 	} else {
-		names := strings.Split(name, "::")
-		if len(names) > 0 && names[0] == "" {
-			ns, err = i.root.Get(names[1:])
-		} else {
-			ns, err = i.Namespace.Get(names)
-		}
+		ns, err = i.lookupNS(name)
 		if err != nil {
 			return "", err
 		}
@@ -113,12 +100,7 @@ func (i *Interp) ChildrenNS(name, pat string) ([]string, error) {
 	if name == "" {
 		ns = i.Namespace
 	} else {
-		names := strings.Split(name, "::")
-		if len(names) > 0 && names[0] == "" {
-			ns, err = i.root.Get(names[1:])
-		} else {
-			ns, err = i.Namespace.Get(names)
-		}
+		ns, err = i.lookupNS(name)
 		if err != nil {
 			return nil, err
 		}
@@ -152,16 +134,7 @@ func (i *Interp) UnregisterNS(name string) error {
 	if name == "" {
 		return nil
 	}
-	var (
-		ns  *Namespace
-		err error
-	)
-	names := strings.Split(name, "::")
-	if len(names) > 0 && names[0] == "" {
-		ns, err = i.root.Get(names[1:])
-	} else {
-		ns, err = i.Namespace.Get(names)
-	}
+	ns, err := i.lookupNS(name)
 	if err != nil {
 		return err
 	}
@@ -360,6 +333,17 @@ func (i *Interp) executeCmd(c *Command) (string, error) {
 		err = fmt.Errorf("%s: %w", c.Cmd, err)
 	}
 	return res, err
+}
+
+func (i *Interp) lookupNS(name string) (*Namespace, error) {
+	names := strings.Split(name, "::")
+	if len(names) == 0 {
+		return nil, fmt.Errorf("invalid namespace name")
+	}
+	if len(names) > 0 && names[0] == "" {
+		return i.root.Get(names[1:])
+	}
+	return i.Namespace.Get(names)
 }
 
 func isSpecial(name string) bool {

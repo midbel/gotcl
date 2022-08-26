@@ -46,6 +46,8 @@ type Interpreter interface {
 
 	RegisterNS(string, string) error
 	UnregisterNS(string) error
+	RegisterVar(string, string) error
+	ResolveVar(string) (string, error)
 	CurrentNS() string
 	ParentNS(string) (string, error)
 	ChildrenNS(string, string) ([]string, error)

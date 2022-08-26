@@ -25,7 +25,17 @@ func RunNamespace() CommandFunc {
 }
 
 func RunVariable(i Interpreter, args []string) (string, error) {
-	return "", ErrImplemented
+	args, err := parseArgs("variable", args, func(_ *flag.FlagSet) (int, bool) {
+		return 1, false
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(args) == 1 {
+		i.RegisterVar(slices.Fst(args), "")
+		return i.ResolveVar(slices.Fst(args))
+	}
+	return slices.Snd(args), i.RegisterVar(slices.Fst(args), slices.Snd(args))
 }
 
 func runUnknownNS(i Interpreter, args []string) (string, error) {
