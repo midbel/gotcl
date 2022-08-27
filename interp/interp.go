@@ -51,7 +51,7 @@ func (i *Interp) Globals(pat string) []string {
 		list = []string{argc, argv, arg0, tclcmd, tclver, tcldepth}
 		root = i.Env.Root()
 	)
-	if a, ok := root.(interface {All() []string}); ok {
+	if a, ok := root.(interface{ All() []string }); ok {
 		list = append(list, a.All()...)
 	}
 	sort.Strings(list)
@@ -59,7 +59,7 @@ func (i *Interp) Globals(pat string) []string {
 }
 
 func (i *Interp) Locals(pat string) []string {
-	a, ok := i.Env.Current().(interface{All() []string})
+	a, ok := i.Env.Current().(interface{ All() []string })
 	if !ok {
 		return nil
 	}
@@ -73,7 +73,7 @@ func (i *Interp) Variables(pat string) []string {
 	list = append(list, i.Globals("")...)
 	list = append(list, i.Locals("")...)
 	if !i.Namespace.Root() {
-		a, ok := i.Namespace.env.(interface{All() []string})
+		a, ok := i.Namespace.env.(interface{ All() []string })
 		if ok {
 			list = append(list, a.All()...)
 		}

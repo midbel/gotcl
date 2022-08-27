@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/midbel/gotcl/stdlib"
 	"github.com/midbel/gotcl/glob"
+	"github.com/midbel/gotcl/stdlib"
 )
 
 var ErrLookup = errors.New("procedure not defined")
