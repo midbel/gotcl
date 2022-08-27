@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -38,19 +39,33 @@ func main() {
 	}
 }
 
+const (
+	in  = "\x1b[1;97min [%3d]:\x1b[0m "
+	ok  = "\x1b[1;92mout[%3d]:\x1b[0m %s"
+	nok = "\x1b[1;91mout[%3d]:\x1b[0m %s"
+)
+
 func runREPL(i stdlib.Interpreter) error {
-	scan := bufio.NewScanner(os.Stdin)
-	io.WriteString(os.Stdin, ">>> ")
+	var (
+		scan = bufio.NewScanner(os.Stdin)
+		cmd  = 1
+	)
+	io.WriteString(os.Stdout, fmt.Sprintf(in, cmd))
 	for scan.Scan() {
 		line := scan.Text()
 		res, err := i.Execute(strings.NewReader(line))
 		if err != nil {
-			return err
+			if errors.Is(err, stdlib.ErrExit) {
+				break
+			}
+			fmt.Fprintf(os.Stderr, fmt.Sprintf(nok, cmd, err))
+			fmt.Fprintln(os.Stderr)
+		} else if res != "" {
+			fmt.Fprintf(os.Stdout, ok, cmd, strings.TrimSpace(res))
+			fmt.Fprintln(os.Stdout)
 		}
-		if res != "" {
-			fmt.Println(strings.TrimSpace(res))
-		}
-		io.WriteString(os.Stdin, ">>> ")
+		cmd++
+		io.WriteString(os.Stdout, fmt.Sprintf(in, cmd))
 	}
 	return scan.Err()
 }
