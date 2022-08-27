@@ -21,6 +21,10 @@ func RunTry(i Interpreter, args []string) (string, error) {
 	return "", ErrImplemented
 }
 
+func RunThrow(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
 func RunCatch(i Interpreter, args []string) (string, error) {
 	return "", ErrImplemented
 }

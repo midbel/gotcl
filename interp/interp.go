@@ -32,7 +32,6 @@ type Interp struct {
 	root *Namespace
 	*Namespace
 
-	Echo  bool
 	Count int
 }
 

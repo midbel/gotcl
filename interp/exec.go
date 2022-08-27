@@ -116,6 +116,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("read", stdlib.RunRead)
 	set.registerCmd("unknown", stdlib.RunUnknown)
 	set.registerCmd("try", stdlib.RunTry)
+	set.registerCmd("throw", stdlib.RunThrow)
 	set.registerCmd("catch", stdlib.RunCatch)
 	set.registerCmd("error", stdlib.RunError)
 
