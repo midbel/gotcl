@@ -1,61 +1,61 @@
 package stdlib
 
 func RunList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunSplit(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunAppendList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunInsertList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunAssignList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunRangeList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunMapList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunLengthList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunIndexList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunRepeatList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunReplaceList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunReverseList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunSearchList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
 func RunSortList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+	return "", ErrImplemented
 }
 
-func RunSettList(i Interpreter, args []string) (string, error) {
-  return "", ErrImplemented
+func RunSetList(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
 }

@@ -24,6 +24,7 @@ const (
 	tclcmd   = "tcl_command"
 	tclver   = "tcl_version"
 	tcldepth = "tcl_depth"
+	envvar   = "env"
 )
 
 type Interp struct {
@@ -48,7 +49,7 @@ func New() stdlib.Interpreter {
 
 func (i *Interp) Globals(pat string) []string {
 	var (
-		list = []string{argc, argv, arg0, tclcmd, tclver, tcldepth}
+		list = []string{argc, argv, arg0, tclcmd, tclver, tcldepth, envvar}
 		root = i.Env.Root()
 	)
 	if a, ok := root.(interface{ All() []string }); ok {
@@ -210,6 +211,10 @@ func (i *Interp) Define(name, value string) error {
 }
 
 func (i *Interp) Resolve(name string) (string, error) {
+	name, key, err := env.ParseName(name)
+	if err != nil {
+		return "", err
+	}
 	switch name {
 	case argc:
 		n := len(os.Args) - 1
@@ -224,6 +229,8 @@ func (i *Interp) Resolve(name string) (string, error) {
 		return strconv.Itoa(i.CmdDepth()), nil
 	case tclver:
 		return i.Version(), nil
+	case envvar:
+		return os.Getenv(key), nil
 	default:
 		return i.resolve(name)
 	}
@@ -429,6 +436,7 @@ func isSpecial(name string) bool {
 	case tclcmd:
 	case tclver:
 	case tcldepth:
+	case envvar:
 	}
 	return true
 }

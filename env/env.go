@@ -4,12 +4,25 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 var (
 	ErrUndefined = errors.New("variable not defined")
 	ErrForbidden = errors.New("operation not allowed")
 )
+
+func ParseName(name string) (string, string, error) {
+	base, rest, ok := strings.Cut(name, "(")
+	if !ok {
+		return name, "", nil
+	}
+	key, rest, ok := strings.Cut(rest, ")")
+	if !ok || rest != "" {
+		return "", "", fmt.Errorf("%s: malformed variable name", name)
+	}
+	return base, key, nil
+}
 
 type Environment interface {
 	Resolve(string) (string, error)
