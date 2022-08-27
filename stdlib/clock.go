@@ -29,7 +29,35 @@ func runTimeAdd(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "", ErrImplemented
+	unix, err := strconv.Atoi(slices.Fst(args))
+	if err != nil {
+		return "", err
+	}
+	offset, err := strconv.Atoi(slices.Snd(args))
+	if err != nil {
+		return "", err
+	}
+
+	now := time.Unix(unix, 0).Add()
+	switch unit := slices.Lst(args); unit {
+	case "seconds", "":
+		now = now.Add(time.Duration(offset) * time.Second)
+	case "minutes":
+		now = now.Add(time.Duration(offset) * time.Minute)
+	case "hours":
+		now = now.Add(time.Duration(offset) * time.Hour)
+	case "days":
+		now = now.AddDate(0, 0, offset)
+	case "weeks":
+		now = now.AddDate(0, 0, offset*7)
+	case "months":
+		now = now.AddDate(0, offset, 0)
+	case "years":
+		now = now.AddDate(offset, 0, 0)
+	default:
+		return "", fmt.Errorf("%s: unknown time unit", unit)
+	}
+	return strconv.FormatInt(now.Unix(), 10), ErrImplemented
 }
 
 func runTimeFormat(i Interpreter, args []string) (string, error) {
