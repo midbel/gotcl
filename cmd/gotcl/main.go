@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -39,13 +40,17 @@ func main() {
 
 func runREPL(i stdlib.Interpreter) error {
 	scan := bufio.NewScanner(os.Stdin)
+	io.WriteString(os.Stdin, ">>> ")
 	for scan.Scan() {
 		line := scan.Text()
 		res, err := i.Execute(strings.NewReader(line))
 		if err != nil {
 			return err
 		}
-		fmt.Println(res)
+		if res != "" {
+			fmt.Println(strings.TrimSpace(res))
+		}
+		io.WriteString(os.Stdin, ">>> ")
 	}
 	return scan.Err()
 }

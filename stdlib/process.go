@@ -25,7 +25,7 @@ func RunTime(i Interpreter, args []string) (string, error) {
 
 func RunExit(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("exit", args, func(_ *flag.FlagSet) (int, bool) {
-		return 1, false
+		return 0, false
 	})
 	if err != nil {
 		return "", err
