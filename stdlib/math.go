@@ -337,7 +337,7 @@ func RunSqrt(i Interpreter, args []string) (string, error) {
 }
 
 func RunWide(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("wide", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("wide", args, func(_ *flag.FlagSet) (int, bool) {
 		return 1, true
 	})
 	if err != nil {
