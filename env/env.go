@@ -103,6 +103,22 @@ func (e *env) LinkVar(ev Environment, dst, src string) error {
 	return err
 }
 
+func (e *env) Size(name string) (int, error) {
+	v, err := e.getVar(name)
+	if err != nil {
+		z, ok := e.parent.(interface{ Size(string) (int, error) })
+		if !ok {
+			return 0, err
+		}
+		return z.Size(name)
+	}
+	z, ok := v.(interface{ Len() int })
+	if !ok {
+		return 0, fmt.Errorf("%s: can not get size", name)
+	}
+	return z.Len(), nil
+}
+
 func (e *env) getVar(name string) (value, error) {
 	if !e.IsSet(name) {
 		return nil, fmt.Errorf("%s: %w", name, ErrUndefined)
@@ -183,6 +199,10 @@ func (a *array) Set(i, v string) error {
 	return nil
 }
 
+func (a *array) Len() int {
+	return len(a.values)
+}
+
 type dict struct {
 	values   map[string]string
 	refcount int
@@ -206,4 +226,8 @@ func (d *dict) Get(k string) (string, error) {
 func (d *dict) Set(k, v string) error {
 	d.values[k] = v
 	return nil
+}
+
+func (d *dict) Len() int {
+	return len(d.values)
 }
