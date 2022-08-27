@@ -3,6 +3,7 @@ package env
 import (
 	"errors"
 	"fmt"
+	"strconv"
 )
 
 var (
@@ -160,7 +161,26 @@ func (a *array) Up() {
 }
 
 func (a *array) Get(i string) (string, error) {
-	return "", nil
+	x, err := strconv.Atoi(i)
+	if err != nil {
+		return "", err
+	}
+	if x < 0 || x >= len(a.values) {
+		return "", fmt.Errorf("%d: index out of range", x)
+	}
+	return a.values[x], nil
+}
+
+func (a *array) Set(i, v string) error {
+	x, err := strconv.Atoi(i)
+	if err != nil {
+		return err
+	}
+	if x < 0 || x >= len(a.values) {
+		return fmt.Errorf("%d: index out of range", x)
+	}
+	a.values[x] = v
+	return nil
 }
 
 type dict struct {
@@ -180,9 +200,10 @@ func (d *dict) Up() {
 }
 
 func (d *dict) Get(k string) (string, error) {
-	return "", nil
+	return d.values[k], nil
 }
 
 func (d *dict) Set(k, v string) error {
+	d.values[k] = v
 	return nil
 }
