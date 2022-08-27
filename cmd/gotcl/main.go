@@ -30,7 +30,7 @@ func main() {
 	}
 	var err error
 	if flag.NArg() == 0 {
-		err = runREPL(i)
+		err = runREPL(interp.Interactive(i))
 	} else {
 		err = runFile(i, flag.Arg(0))
 	}

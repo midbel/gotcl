@@ -408,6 +408,17 @@ func (i *Interp) lookupNS(name string) (*Namespace, error) {
 	return i.Namespace.Get(names)
 }
 
+type Interact struct {
+	stdlib.Interpreter
+	History []string
+}
+
+func Interactive(i stdlib.Interpreter) stdlib.Interpreter {
+	return &Interact{
+		Interpreter: i,
+	}
+}
+
 func isSpecial(name string) bool {
 	switch name {
 	default:
