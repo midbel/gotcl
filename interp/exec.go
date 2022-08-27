@@ -120,6 +120,21 @@ func DefaultSet() CommandSet {
 	set.registerCmd("throw", stdlib.RunThrow)
 	set.registerCmd("catch", stdlib.RunCatch)
 	set.registerCmd("error", stdlib.RunError)
+	set.registerCmd("list", stdlib.RunList)
+	set.registerCmd("split", stdlib.RunSplit)
+	set.registerCmd("lappend", stdlib.RunAppendList)
+	set.registerCmd("linsert", stdlib.RunInsertList)
+	set.registerCmd("lassign", stdlib.RunAssignList)
+	set.registerCmd("lrange", stdlib.RunRangeList)
+	set.registerCmd("lmap", stdlib.RunMapList)
+	set.registerCmd("llength", stdlib.RunLengthList)
+	set.registerCmd("lindex", stdlib.RunIndexList)
+	set.registerCmd("lrepeat", stdlib.RunRepeatList)
+	set.registerCmd("lreplace", stdlib.RunReplaceList)
+	set.registerCmd("lreverse", stdlib.RunReverseList)
+	set.registerCmd("lsearch", stdlib.RunSearchList)
+	set.registerCmd("lsort", stdlib.RunSortList)
+	set.registerCmd("lset", stdlib.RunSetList)
 
 	return set
 }
