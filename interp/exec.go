@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/midbel/gotcl/stdlib"
+	"github.com/midbel/gotcl/glob"
 )
 
 var ErrLookup = errors.New("procedure not defined")
@@ -131,15 +132,18 @@ func (cs CommandSet) Lookup(name string) (stdlib.Executer, error) {
 	return exec, nil
 }
 
+func (cs CommandSet) CmdList(pat string) []string {
+	return cs.getList(pat, func(e stdlib.Executer) bool {
+		_, ok := e.(procedure)
+		return !ok
+	})
+}
+
 func (cs CommandSet) ProcList(pat string) []string {
-	list := make([]string, 0, len(cs))
-	for k, e := range cs {
-		if _, ok := e.(procedure); !ok {
-			continue
-		}
-		list = append(list, k)
-	}
-	return list
+	return cs.getList(pat, func(e stdlib.Executer) bool {
+		_, ok := e.(procedure)
+		return ok
+	})
 }
 
 func (cs CommandSet) ProcArgs(proc string) ([]string, error) {
@@ -225,6 +229,17 @@ func (cs CommandSet) find(proc string) (procedure, error) {
 		return p, fmt.Errorf("%s: not defined with proc command", proc)
 	}
 	return p, nil
+}
+
+func (cs CommandSet) getList(pat string, keep func(e stdlib.Executer) bool) []string {
+	list := make([]string, 0, len(cs))
+	for k, e := range cs {
+		if !keep(e) {
+			continue
+		}
+		list = append(list, k)
+	}
+	return glob.Filter(list, pat)
 }
 
 type argument struct {

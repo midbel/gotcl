@@ -5,14 +5,22 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/midbel/gotcl/stdlib/conv"
 	"github.com/midbel/slices"
 )
 
+type VariableIntrospecter interface {
+	Globals(string) []string
+	Locals(string) []string
+	Variables(string) []string
+}
+
 type CommandIntrospecter interface {
 	CmdDepth() int
 	CmdCount() int
+	CmdList(string) []string
 }
 
 type ProcIntrospecter interface {
@@ -55,7 +63,16 @@ func runComplete(i Interpreter, args []string) (string, error) {
 }
 
 func runCommands(i Interpreter, args []string) (string, error) {
-	return "", ErrImplemented
+	args, err := parseArgs("commands", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, false
+	})
+	if err != nil {
+		return "", err
+	}
+	return introspectCmd(i, func(ci CommandIntrospecter) (string, error) {
+		list := ci.CmdList(slices.Fst(args))
+		return strings.Join(list, " "), nil
+	})
 }
 
 func runCmdCount(i Interpreter, args []string) (string, error) {
@@ -92,10 +109,8 @@ func runProcs(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return introspectProc(i, func(pi ProcIntrospecter) (string, error) {
-		for _, p := range pi.ProcList(slices.Fst(args)) {
-			i.Println("stdout", p)
-		}
-		return "", nil
+		list := pi.ProcList(slices.Fst(args))
+		return strings.Join(list, " "), nil
 	})
 }
 
@@ -111,10 +126,7 @@ func runProcArgs(i Interpreter, args []string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		for _, a := range args {
-			i.Println("stdout", a)
-		}
-		return "", nil
+		return strings.Join(args, " "), nil
 	})
 }
 
@@ -126,12 +138,7 @@ func runProcBody(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 	return introspectProc(i, func(pi ProcIntrospecter) (string, error) {
-		body, err := pi.ProcBody(slices.Fst(args))
-		if err != nil {
-			return "", err
-		}
-		i.Println("stdout", body)
-		return "", nil
+		return pi.ProcBody(slices.Fst(args))
 	})
 }
 
@@ -155,15 +162,42 @@ func runProcDefaultArg(i Interpreter, args []string) (string, error) {
 }
 
 func runGlobals(i Interpreter, args []string) (string, error) {
-	return "", nil
+	args, err := parseArgs("globals", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, false
+	})
+	if err != nil {
+		return "", err
+	}
+	return introspectVars(i, func(vi VariableIntrospecter) (string, error) {
+		args = vi.Globals(slices.Fst(args))
+		return strings.Join(args, " "), nil
+	})
 }
 
 func runLocals(i Interpreter, args []string) (string, error) {
-	return "", nil
+	args, err := parseArgs("locals", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, false
+	})
+	if err != nil {
+		return "", err
+	}
+	return introspectVars(i, func(vi VariableIntrospecter) (string, error) {
+		args = vi.Locals(slices.Fst(args))
+		return strings.Join(args, " "), nil
+	})
 }
 
 func runVars(i Interpreter, args []string) (string, error) {
-	return "", nil
+	args, err := parseArgs("vars", args, func(_ *flag.FlagSet) (int, bool) {
+		return 0, false
+	})
+	if err != nil {
+		return "", err
+	}
+	return introspectVars(i, func(vi VariableIntrospecter) (string, error) {
+		args = vi.Variables(slices.Fst(args))
+		return strings.Join(args, " "), nil
+	})
 }
 
 func runExecutable(i Interpreter, args []string) (string, error) {
@@ -173,11 +207,7 @@ func runExecutable(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	exec, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
-	return exec, nil
+	return os.Executable()
 }
 
 func runHost(i Interpreter, args []string) (string, error) {
@@ -187,11 +217,7 @@ func runHost(i Interpreter, args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	host, err := os.Hostname()
-	if err != nil {
-		return "", err
-	}
-	return host, nil
+	return os.Hostname()
 }
 
 func runExists(i Interpreter, args []string) (string, error) {
@@ -218,7 +244,7 @@ func runVersion(i Interpreter, args []string) (string, error) {
 func introspectProc(i Interpreter, do func(pi ProcIntrospecter) (string, error)) (string, error) {
 	pi, ok := i.(ProcIntrospecter)
 	if !ok {
-		return "", fmt.Errorf("interpreter can not check proc")
+		return "", fmt.Errorf("interpreter can not check procedure(s)")
 	}
 	return do(pi)
 }
@@ -226,7 +252,15 @@ func introspectProc(i Interpreter, do func(pi ProcIntrospecter) (string, error))
 func introspectCmd(i Interpreter, do func(pi CommandIntrospecter) (string, error)) (string, error) {
 	pi, ok := i.(CommandIntrospecter)
 	if !ok {
-		return "", fmt.Errorf("interpreter can not check command")
+		return "", fmt.Errorf("interpreter can not check command(s)")
 	}
 	return do(pi)
+}
+
+func introspectVars(i Interpreter, do func(vi VariableIntrospecter) (string, error)) (string, error) {
+	vi, ok := i.(VariableIntrospecter)
+	if !ok {
+		return "", fmt.Errorf("interpreter can not check variable(s)")
+	}
+	return do(vi)
 }

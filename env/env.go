@@ -40,6 +40,14 @@ func EmptyEnv() Environment {
 	return EnclosedEnv(nil)
 }
 
+func (e *env) All() []string {
+	list := make([]string, 0, len(e.values))
+	for n := range e.values {
+		list = append(list, n)
+	}
+	return list
+}
+
 func (e *env) Exists(name string) bool {
 	_, ok := e.values[name]
 	if !ok && e.parent != nil {

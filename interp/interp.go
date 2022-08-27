@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -43,6 +44,42 @@ func New() stdlib.Interpreter {
 	}
 	i.Namespace = i.root
 	return i
+}
+
+func (i *Interp) Globals(pat string) []string {
+	var (
+		list = []string{argc, argv, arg0, tclcmd, tclver, tcldepth}
+		root = i.Env.Root()
+	)
+	if a, ok := root.(interface {All() []string}); ok {
+		list = append(list, a.All()...)
+	}
+	sort.Strings(list)
+	return glob.Filter(list, pat)
+}
+
+func (i *Interp) Locals(pat string) []string {
+	a, ok := i.Env.Current().(interface{All() []string})
+	if !ok {
+		return nil
+	}
+	list := a.All()
+	sort.Strings(list)
+	return glob.Filter(list, pat)
+}
+
+func (i *Interp) Variables(pat string) []string {
+	var list []string
+	list = append(list, i.Globals("")...)
+	list = append(list, i.Locals("")...)
+	if !i.Namespace.Root() {
+		a, ok := i.Namespace.env.(interface{All() []string})
+		if ok {
+			list = append(list, a.All()...)
+		}
+	}
+	sort.Strings(list)
+	return glob.Filter(list, pat)
 }
 
 func (i *Interp) Valid(cmd string) (bool, error) {

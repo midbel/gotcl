@@ -88,6 +88,10 @@ func (e *Env) IsSet(name string) bool {
 	return e.Current().IsSet(name)
 }
 
+func (e *Env) Root() env.Environment {
+	return slices.Fst(e.list)
+}
+
 func (e *Env) Current() env.Environment {
 	return slices.Lst(e.list)
 }
