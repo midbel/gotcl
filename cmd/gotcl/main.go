@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -47,16 +48,29 @@ const (
 
 func runREPL(i stdlib.Interpreter) error {
 	var (
+		buf  bytes.Buffer
+		tmp  bytes.Buffer
 		scan = bufio.NewScanner(os.Stdin)
 		cmd  = 1
 	)
 	io.WriteString(os.Stdout, fmt.Sprintf(in, cmd))
 	for scan.Scan() {
 		line := scan.Text()
-		res, err := i.Execute(strings.NewReader(line))
+		if strings.TrimSpace(line) == "" {
+			cmd++
+			io.WriteString(os.Stdout, fmt.Sprintf(in, cmd))
+			continue
+		}
+		buf.WriteString(line + "\n")
+		res, err := i.Execute(io.TeeReader(&buf, &tmp))
 		if err != nil {
 			if errors.Is(err, stdlib.ErrExit) {
 				break
+			}
+			if errors.Is(err, interp.ErrIncomplete) {
+				io.Copy(&buf, &tmp)
+				fmt.Fprint(os.Stdout, "... ")
+				continue
 			}
 			fmt.Fprintf(os.Stderr, fmt.Sprintf(nok, cmd, err))
 			fmt.Fprintln(os.Stderr)

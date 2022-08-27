@@ -45,6 +45,15 @@ func New() stdlib.Interpreter {
 	return i
 }
 
+func (i *Interp) Valid(cmd string) (bool, error) {
+	b, err := Build(strings.NewReader(cmd))
+	if err != nil {
+		return false, err
+	}
+	_, err = b.Next(i)
+	return err == nil, err
+}
+
 func (i *Interp) ResolveVar(name string) (string, error) {
 	if i.Namespace.Root() {
 		return "", fmt.Errorf("variable can not be resolved in global namespace")

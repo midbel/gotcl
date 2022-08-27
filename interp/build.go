@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -8,6 +9,8 @@ import (
 	"github.com/midbel/gotcl/stdlib"
 	"github.com/midbel/gotcl/word"
 )
+
+var ErrIncomplete = errors.New("incomplete")
 
 type Command struct {
 	Cmd  string
@@ -62,6 +65,9 @@ func (b *Builder) prepare(env stdlib.Interpreter) (string, error) {
 	b.skipBlank()
 	var str strings.Builder
 	for !b.isEnd() {
+		if b.curr.Type == word.Illegal {
+			return "", ErrIncomplete
+		}
 		word, err := substitute(b.curr, env)
 		if err != nil {
 			return "", err

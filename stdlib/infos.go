@@ -38,8 +38,20 @@ func RunInfos() CommandFunc {
 		"locals":           runLocals,
 		"procs":            runProcs,
 		"vars":             runVars,
+		"complete":         runComplete,
 	}
 	return makeEnsemble("infos", set)
+}
+
+func runComplete(i Interpreter, args []string) (string, error) {
+	args, err := parseArgs("complete", args, func(_ *flag.FlagSet) (int, bool) {
+		return 1, true
+	})
+	if err != nil {
+		return "", err
+	}
+	ok, err := i.Valid(slices.Fst(args))
+	return conv.Bool(ok), err
 }
 
 func runCommands(i Interpreter, args []string) (string, error) {

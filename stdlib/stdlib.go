@@ -32,6 +32,7 @@ type Interpreter interface {
 
 	env.Environment
 	Do(string, func(string) (string, error)) (string, error)
+	Valid(string) (bool, error)
 	Execute(io.Reader) (string, error)
 	ExecuteUp(io.Reader, int) (string, error)
 
