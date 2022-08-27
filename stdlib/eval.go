@@ -33,6 +33,10 @@ func RunError(i Interpreter, args []string) (string, error) {
 	return "", ErrImplemented
 }
 
+func RunDefer(i Interpreter, args []string) (string, error) {
+	return "", ErrImplemented
+}
+
 func RunFor(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("for", args, func(_ *flag.FlagSet) (int, bool) {
 		return 4, true

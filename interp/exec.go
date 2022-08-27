@@ -21,61 +21,6 @@ func EmptySet() CommandSet {
 	return make(CommandSet)
 }
 
-func MathfuncSet() CommandSet {
-	set := EmptySet()
-
-	set.registerCmd("abs", stdlib.RunAbs)
-	set.registerCmd("acos", stdlib.RunAcos)
-	set.registerCmd("asin", stdlib.RunAsin)
-	set.registerCmd("atan", stdlib.RunAtan)
-	set.registerCmd("atan2", stdlib.RunAtan2)
-	set.registerCmd("cos", stdlib.RunCos)
-	set.registerCmd("cosh", stdlib.RunCosh)
-	set.registerCmd("sin", stdlib.RunSin)
-	set.registerCmd("sinh", stdlib.RunSinh)
-	set.registerCmd("tan", stdlib.RunTan)
-	set.registerCmd("tanh", stdlib.RunTanh)
-	set.registerCmd("hypot", stdlib.RunHypot)
-	set.registerCmd("bool", stdlib.RunBool)
-	set.registerCmd("double", stdlib.RunDouble)
-	set.registerCmd("entier", stdlib.RunEntier)
-	set.registerCmd("ceil", stdlib.RunCeil)
-	set.registerCmd("floor", stdlib.RunFloor)
-	set.registerCmd("round", stdlib.RunRound)
-	set.registerCmd("fmod", stdlib.RunFmod)
-	set.registerCmd("int", stdlib.RunInt)
-	set.registerCmd("exp", stdlib.RunExp)
-	set.registerCmd("log", stdlib.RunLog)
-	set.registerCmd("log10", stdlib.RunLog10)
-	set.registerCmd("max", stdlib.RunMax)
-	set.registerCmd("min", stdlib.RunMin)
-	set.registerCmd("pow", stdlib.RunRaise)
-	set.registerCmd("rand", stdlib.RunRand)
-	set.registerCmd("srand", stdlib.RunSrand)
-	set.registerCmd("isqrt", stdlib.RunIsqrt)
-	set.registerCmd("sqrt", stdlib.RunSqrt)
-
-	return set
-}
-
-func MathopSet() CommandSet {
-	set := EmptySet()
-	set.registerCmd("!", stdlib.RunNot)
-	set.registerCmd("+", stdlib.RunAdd)
-	set.registerCmd("-", stdlib.RunSub)
-	set.registerCmd("*", stdlib.RunMul)
-	set.registerCmd("**", stdlib.RunPow)
-	set.registerCmd("/", stdlib.RunDiv)
-	set.registerCmd("%", stdlib.RunMod)
-	set.registerCmd("==", stdlib.RunEq)
-	set.registerCmd("!=", stdlib.RunNe)
-	set.registerCmd("<", stdlib.RunLt)
-	set.registerCmd("<=", stdlib.RunLe)
-	set.registerCmd(">", stdlib.RunGt)
-	set.registerCmd(">=", stdlib.RunGe)
-	return set
-}
-
 func DefaultSet() CommandSet {
 	set := EmptySet()
 
@@ -136,7 +81,63 @@ func DefaultSet() CommandSet {
 	set.registerCmd("lsort", stdlib.RunSortList)
 	set.registerCmd("lset", stdlib.RunSetList)
 	set.registerCmd("array", stdlib.RunArray())
+	set.registerCmd("defer", stdlib.RunDefer)
 
+	return set
+}
+
+func MathfuncSet() CommandSet {
+	set := EmptySet()
+
+	set.registerCmd("abs", stdlib.RunAbs)
+	set.registerCmd("acos", stdlib.RunAcos)
+	set.registerCmd("asin", stdlib.RunAsin)
+	set.registerCmd("atan", stdlib.RunAtan)
+	set.registerCmd("atan2", stdlib.RunAtan2)
+	set.registerCmd("cos", stdlib.RunCos)
+	set.registerCmd("cosh", stdlib.RunCosh)
+	set.registerCmd("sin", stdlib.RunSin)
+	set.registerCmd("sinh", stdlib.RunSinh)
+	set.registerCmd("tan", stdlib.RunTan)
+	set.registerCmd("tanh", stdlib.RunTanh)
+	set.registerCmd("hypot", stdlib.RunHypot)
+	set.registerCmd("bool", stdlib.RunBool)
+	set.registerCmd("double", stdlib.RunDouble)
+	set.registerCmd("entier", stdlib.RunEntier)
+	set.registerCmd("ceil", stdlib.RunCeil)
+	set.registerCmd("floor", stdlib.RunFloor)
+	set.registerCmd("round", stdlib.RunRound)
+	set.registerCmd("fmod", stdlib.RunFmod)
+	set.registerCmd("int", stdlib.RunInt)
+	set.registerCmd("exp", stdlib.RunExp)
+	set.registerCmd("log", stdlib.RunLog)
+	set.registerCmd("log10", stdlib.RunLog10)
+	set.registerCmd("max", stdlib.RunMax)
+	set.registerCmd("min", stdlib.RunMin)
+	set.registerCmd("pow", stdlib.RunRaise)
+	set.registerCmd("rand", stdlib.RunRand)
+	set.registerCmd("srand", stdlib.RunSrand)
+	set.registerCmd("isqrt", stdlib.RunIsqrt)
+	set.registerCmd("sqrt", stdlib.RunSqrt)
+
+	return set
+}
+
+func MathopSet() CommandSet {
+	set := EmptySet()
+	set.registerCmd("!", stdlib.RunNot)
+	set.registerCmd("+", stdlib.RunAdd)
+	set.registerCmd("-", stdlib.RunSub)
+	set.registerCmd("*", stdlib.RunMul)
+	set.registerCmd("**", stdlib.RunPow)
+	set.registerCmd("/", stdlib.RunDiv)
+	set.registerCmd("%", stdlib.RunMod)
+	set.registerCmd("==", stdlib.RunEq)
+	set.registerCmd("!=", stdlib.RunNe)
+	set.registerCmd("<", stdlib.RunLt)
+	set.registerCmd("<=", stdlib.RunLe)
+	set.registerCmd(">", stdlib.RunGt)
+	set.registerCmd(">=", stdlib.RunGe)
 	return set
 }
 
