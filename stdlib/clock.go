@@ -2,6 +2,7 @@ package stdlib
 
 import (
 	"flag"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -24,12 +25,12 @@ func RunClock() CommandFunc {
 
 func runTimeAdd(i Interpreter, args []string) (string, error) {
 	args, err := parseArgs("add", args, func(_ *flag.FlagSet) (int, bool) {
-		return 2, true
+		return 2, false
 	})
 	if err != nil {
 		return "", err
 	}
-	unix, err := strconv.Atoi(slices.Fst(args))
+	unix, err := strconv.ParseInt(slices.Fst(args), 0, 64)
 	if err != nil {
 		return "", err
 	}
@@ -38,7 +39,7 @@ func runTimeAdd(i Interpreter, args []string) (string, error) {
 		return "", err
 	}
 
-	now := time.Unix(unix, 0).Add()
+	now := time.Unix(unix, 0)
 	switch unit := slices.Lst(args); unit {
 	case "seconds", "":
 		now = now.Add(time.Duration(offset) * time.Second)
@@ -57,7 +58,7 @@ func runTimeAdd(i Interpreter, args []string) (string, error) {
 	default:
 		return "", fmt.Errorf("%s: unknown time unit", unit)
 	}
-	return strconv.FormatInt(now.Unix(), 10), ErrImplemented
+	return strconv.FormatInt(now.Unix(), 10), nil
 }
 
 func runTimeFormat(i Interpreter, args []string) (string, error) {
