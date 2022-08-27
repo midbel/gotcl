@@ -74,7 +74,7 @@ func runExistNS(i Interpreter, args []string) (string, error) {
 }
 
 func runCurrentNS(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("current", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("current", args, func(_ *flag.FlagSet) (int, bool) {
 		return 0, true
 	})
 	if err != nil {
@@ -108,31 +108,31 @@ func runChildrenNS(i Interpreter, args []string) (string, error) {
 }
 
 func runExportNS(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("export", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("export", args, func(_ *flag.FlagSet) (int, bool) {
 		return 1, false
 	})
 	if err != nil {
 		return "", err
 	}
-	return "", err
+	return "", ErrImplemented
 }
 
 func runImportNS(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("import", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("import", args, func(_ *flag.FlagSet) (int, bool) {
 		return 1, false
 	})
 	if err != nil {
 		return "", err
 	}
-	return "", err
+	return "", ErrImplemented
 }
 
 func runForgetNS(i Interpreter, args []string) (string, error) {
-	args, err := parseArgs("forget", args, func(_ *flag.FlagSet) (int, bool) {
+	_, err := parseArgs("forget", args, func(_ *flag.FlagSet) (int, bool) {
 		return 1, false
 	})
 	if err != nil {
 		return "", err
 	}
-	return "", err
+	return "", ErrImplemented
 }
