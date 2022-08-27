@@ -135,6 +135,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("lsearch", stdlib.RunSearchList)
 	set.registerCmd("lsort", stdlib.RunSortList)
 	set.registerCmd("lset", stdlib.RunSetList)
+	set.registerCmd("array", stdlib.RunArray())
 
 	return set
 }

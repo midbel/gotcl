@@ -55,3 +55,7 @@ func RunSearchList(i Interpreter, args []string) (string, error) {
 func RunSortList(i Interpreter, args []string) (string, error) {
   return "", ErrImplemented
 }
+
+func RunSettList(i Interpreter, args []string) (string, error) {
+  return "", ErrImplemented
+}
