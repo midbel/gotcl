@@ -309,6 +309,7 @@ func RunTypeOf(i *Interpreter, args []Value) (Value, error) {
 }
 
 func RunDefer(i *Interpreter, args []Value) (Value, error) {
+	i.registerDefer(slices.Fst(args).String())
 	return nil, nil
 }
 
@@ -367,6 +368,23 @@ func (i *Interpreter) push() {
 	i.frames = append(i.frames, Prepare())
 }
 
+func (i *Interpreter) registerDefer(script string) {
+	x := len(i.frames)
+	i.frames[x-1].deferred = append(i.frames[x-1].deferred, script)
+}
+
+func (i *Interpreter) deferred() {
+	defer i.pop()
+	var (
+		x = len(i.frames)
+		a = i.last
+	)
+	for _, str := range i.frames[x-1].deferred {
+		i.Execute(strings.NewReader(str))
+	}
+	i.last = a
+}
+
 func (i *Interpreter) pop() {
 	n := len(i.frames)
 	if n == 1 {
@@ -400,7 +418,7 @@ func (i *Interpreter) Resolve(n string) (Value, error) {
 
 func (i *Interpreter) Execute(r io.Reader) (Value, error) {
 	i.push()
-	defer i.pop()
+	defer i.deferred()
 
 	p, err := New(r)
 	if err != nil {

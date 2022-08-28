@@ -1,3 +1,5 @@
+defer { puts "leaving mini.tcl" }
+puts "enter mini.tcl"
 set foobar foobar
 puts $foobar
 puts foo
