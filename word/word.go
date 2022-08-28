@@ -14,6 +14,7 @@ const (
 	Variable
 	Script // [...]
 	Quote  // "..."
+	Block  // {...}
 	Comment
 	Illegal
 	Paren
@@ -132,6 +133,8 @@ func (w Word) Debug() string {
 		return fmt.Sprintf("script(%s)", w.Literal)
 	case Literal:
 		return fmt.Sprintf("literal(%s)", w.Literal)
+	case Block:
+		return fmt.Sprintf("block(%s)", w.Literal)
 	case Quote:
 		return fmt.Sprintf("quote(%s)", w.Literal)
 	case Variable:

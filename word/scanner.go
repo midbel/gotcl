@@ -329,7 +329,7 @@ func (s *Scanner) scanLiteral(w *Word, isDone func(rune) bool) {
 		s.str.WriteRune(s.escape())
 		s.read()
 	}
-	w.Type = Literal
+	w.Type = Block
 	w.Literal = s.str.String()
 }
 

@@ -81,7 +81,7 @@ func (s String) String() string {
 }
 
 func (s String) ToList() (Value, error) {
-	return splitString(s.value)
+	return split(s.value)
 }
 
 func (s String) ToNumber() (Value, error) {
@@ -301,6 +301,89 @@ func (p *Parser) isBlank() bool {
 	return p.curr.Type == word.Blank
 }
 
+func list2str(list []Value) Value {
+	if len(list) == 1 {
+		return list[0]
+	}
+	var str strings.Builder
+	for i := range list {
+		str.WriteString(list[i].String())
+	}
+	return Str(str.String())
+}
+
+func split(str string) (Value, error) {
+	str = strings.TrimSpace(str)
+	scan, err := word.Scan(strings.NewReader(str))
+	if err != nil {
+		return nil, err
+	}
+	var list List
+	for {
+		w := scan.Scan()
+		if w.Type == word.EOF {
+			break
+		}
+		if w.Type == word.Blank {
+			continue
+		}
+		switch w.Type {
+		case word.Literal:
+		case word.Block:
+			w.Literal = fmt.Sprintf("{%s}", w.Literal)
+		case word.Variable:
+			w.Literal = fmt.Sprintf("$%s", w.Literal)
+		case word.Script:
+			w.Literal = fmt.Sprintf("[%s]", w.Literal)
+		case word.Quote:
+			w.Literal = fmt.Sprintf("\"%s\"", w.Literal)
+		default:
+			return nil, fmt.Errorf("%s: %w", w, ErrSyntax)
+		}
+		list.values = append(list.values, Str(w.Literal))
+	}
+	return list, nil
+}
+
+func substitute(curr word.Word, i *Interpreter) (Value, error) {
+	split := func(str string, i *Interpreter) (Value, error) {
+		scan, err := word.Scan(strings.NewReader(str))
+		if err != nil {
+			return nil, err
+		}
+		var list []Value
+		for {
+			w := scan.Split()
+			if w.Type == word.EOF {
+				break
+			}
+			val, err := substitute(w, i)
+			if err != nil {
+				return nil, err
+			}
+			list = append(list, val)
+		}
+		return list2str(list), nil
+	}
+	var (
+		val Value
+		err error
+	)
+	switch curr.Type {
+	case word.Literal, word.Block:
+		val = Str(curr.Literal)
+	case word.Variable:
+		val, err = i.Resolve(curr.Literal)
+	case word.Quote:
+		val, err = split(curr.Literal, i)
+	case word.Script:
+		val, err = i.Execute(strings.NewReader(curr.Literal))
+	default:
+		err = fmt.Errorf("%s: %w", curr, ErrSyntax)
+	}
+	return val, err
+}
+
 type CommandFunc func(*Interpreter, []Value) (Value, error)
 
 func RunTypeOf(i *Interpreter, args []Value) (Value, error) {
@@ -344,8 +427,23 @@ func RunListLen(i *Interpreter, args []Value) (Value, error) {
 	return Int(int64(n.Len())), nil
 }
 
+type CommandSet map[string]CommandFunc
+
+type Namespace struct {
+	env *Env
+	CommandSet
+}
+
+func EmptyNS() *Namespace {
+	return &Namespace{
+		env:        EmptyEnv(),
+		CommandSet: make(CommandSet),
+	}
+}
+
 type Frame struct {
 	env      *Env
+	ns       *Namespace
 	deferred []string
 }
 
@@ -362,35 +460,6 @@ type Interpreter struct {
 
 func Interpret() Interpreter {
 	return Interpreter{}
-}
-
-func (i *Interpreter) push() {
-	i.frames = append(i.frames, Prepare())
-}
-
-func (i *Interpreter) registerDefer(script string) {
-	x := len(i.frames)
-	i.frames[x-1].deferred = append(i.frames[x-1].deferred, script)
-}
-
-func (i *Interpreter) deferred() {
-	defer i.pop()
-	var (
-		x = len(i.frames)
-		a = i.last
-	)
-	for _, str := range i.frames[x-1].deferred {
-		i.Execute(strings.NewReader(str))
-	}
-	i.last = a
-}
-
-func (i *Interpreter) pop() {
-	n := len(i.frames)
-	if n == 1 {
-		return
-	}
-	i.frames = i.frames[:n-1]
 }
 
 func (i *Interpreter) Define(n string, v Value) {
@@ -418,7 +487,7 @@ func (i *Interpreter) Resolve(n string) (Value, error) {
 
 func (i *Interpreter) Execute(r io.Reader) (Value, error) {
 	i.push()
-	defer i.deferred()
+	defer i.executeDefer()
 
 	p, err := New(r)
 	if err != nil {
@@ -463,75 +532,33 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 	return exec(i, c.Args)
 }
 
-func list2str(list []Value) Value {
-	if len(list) == 1 {
-		return list[0]
-	}
-	var str strings.Builder
-	for i := range list {
-		str.WriteString(list[i].String())
-	}
-	return Str(str.String())
+func (i *Interpreter) push() {
+	i.frames = append(i.frames, Prepare())
 }
 
-func split(str string, i *Interpreter) (Value, error) {
-	scan, err := word.Scan(strings.NewReader(str))
-	if err != nil {
-		return nil, err
+func (i *Interpreter) pop() {
+	n := len(i.frames)
+	if n == 1 {
+		return
 	}
-	var list []Value
-	for {
-		w := scan.Split()
-		if w.Type == word.EOF {
-			break
-		}
-		val, err := substitute(w, i)
-		if err != nil {
-			return nil, err
-		}
-		list = append(list, val)
-	}
-	return list2str(list), nil
+	i.frames = i.frames[:n-1]
 }
 
-func splitString(str string) (Value, error) {
-	str = strings.TrimSpace(str)
-	scan, err := word.Scan(strings.NewReader(str))
-	if err != nil {
-		return nil, err
-	}
-	var list List
-	for {
-		w := scan.Scan()
-		if w.Type == word.EOF {
-			break
-		}
-		if w.Type == word.Blank {
-			continue
-		}
-		list.values = append(list.values, Str(w.Literal))
-	}
-	return list, nil
+func (i *Interpreter) registerDefer(script string) {
+	x := len(i.frames)
+	i.frames[x-1].deferred = append(i.frames[x-1].deferred, script)
 }
 
-func substitute(curr word.Word, i *Interpreter) (Value, error) {
+func (i *Interpreter) executeDefer() {
+	defer i.pop()
 	var (
-		val Value
-		err error
+		x = len(i.frames)
+		a = i.last
 	)
-	switch curr.Type {
-	case word.Literal:
-		val = Str(curr.Literal)
-	case word.Variable:
-		val, err = i.Resolve(curr.Literal)
-	case word.Quote:
-		val, err = split(curr.Literal, i)
-	case word.Script:
-		val, err = i.Execute(strings.NewReader(curr.Literal))
-	default:
-		err = fmt.Errorf("%s: %w", curr, ErrSyntax)
+	for _, str := range i.frames[x-1].deferred {
+		i.Execute(strings.NewReader(str))
 	}
-	return val, err
+	i.last = a
 }
 
 func main() {
