@@ -274,9 +274,7 @@ func (s *Scanner) scanVariable(w *Word) {
 	s.read()
 	var (
 		escaped bool
-		accept  = func(r rune) bool {
-			return isAlpha(r) || r == lparen || r == rparen
-		}
+		accept  = isAlpha
 	)
 	if escaped = s.char == lcurly; escaped {
 		s.read()
