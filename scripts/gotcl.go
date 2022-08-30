@@ -621,13 +621,75 @@ func RunListLen() Executer {
 
 type argument struct {
 	Name    string
-	Default string
+	Default Value
+}
+
+func createArg(n string, v Value) argument {
+	return argument{
+		Name:    n,
+		Default: v,
+	}
+}
+
+func parseArguments(str string) ([]argument, error) {
+	argWithDefault := func(str string) ([]string, error) {
+		scan, err := word.Scan(strings.NewReader(str))
+		if err != nil {
+			return nil, err
+		}
+		scan.KeepBlanks(false)
+		var words []string
+		for {
+			w := scan.Scan()
+			if w.Type == word.EOF {
+				break
+			}
+			if w.Type != word.Literal && w.Type != word.Block {
+				return nil, ErrSyntax
+			}
+			words = append(words, w.Literal)
+		}
+		if len(words) != 2 {
+			return nil, ErrSyntax
+		}
+		return words, nil
+	}
+	var list []argument
+
+	scan, err := word.Scan(strings.NewReader(str))
+	if err != nil {
+		return nil, err
+	}
+	scan.KeepBlanks(false)
+	for {
+		w := scan.Scan()
+		if w.Type == word.EOF {
+			break
+		}
+		if w.Type == word.Illegal {
+			return nil, ErrSyntax
+		}
+		switch w.Type {
+		case word.Literal:
+			list = append(list, createArg(w.Literal, nil))
+		case word.Block:
+			ws, err := argWithDefault(w.Literal)
+			if err != nil {
+				return nil, err
+			}
+			list = append(list, createArg(ws[0], Str(ws[1])))
+		default:
+			return nil, ErrSyntax
+		}
+	}
+	return list, nil
 }
 
 type procedure struct {
-	Name string
-	Body string
-	Args []argument
+	Name     string
+	Body     string
+	Args     []argument
+	Variadic bool
 }
 
 func createProcedure(name, body, args string) (Executer, error) {
@@ -635,10 +697,24 @@ func createProcedure(name, body, args string) (Executer, error) {
 		Name: name,
 		Body: strings.TrimSpace(body),
 	}
+	args = strings.TrimSpace(args)
+	if len(args) != 0 {
+		as, err := parseArguments(args)
+		if err != nil {
+			return nil, err
+		}
+		p.Args = as
+	}
 	return p, nil
 }
 
 func (p procedure) Execute(i *Interpreter, args []Value) (Value, error) {
+	for j, a := range p.Args {
+		if j < len(args) {
+			a.Default = args[j]
+		}
+		i.Define(a.Name, a.Default)
+	}
 	return i.Execute(strings.NewReader(p.Body))
 }
 
@@ -876,8 +952,8 @@ func (i *Interpreter) Resolve(n string) (Value, error) {
 		return i.currentFrame().Resolve(n)
 	}
 	var (
-		ps  = name[:len(name)-1]
-		vs  = name[len(name)-1]
+		ps  = slices.Slice(name)
+		vs  = slices.Lst(name)
 		ns  *Namespace
 		err error
 	)
@@ -931,14 +1007,14 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 		err   error
 	)
 	if n := len(parts); n > 1 {
-		ns, err = i.currentNS().LookupNS(parts[:len(parts)-1])
+		ns, err = i.currentNS().LookupNS(slices.Slice(parts))
 	} else {
 		ns = i.currentNS()
 	}
 	if err != nil {
 		return nil, err
 	}
-	exec, err := ns.LookupExec(parts[len(parts)-1:])
+	exec, err := ns.LookupExec(slices.Take(parts, len(parts)-1))
 	if err != nil {
 		return nil, err
 	}

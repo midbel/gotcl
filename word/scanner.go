@@ -314,7 +314,7 @@ func (s *Scanner) scanUntil(w *Word, starts, ends rune) {
 }
 
 func (s *Scanner) scanBraces(w *Word) {
-	w.Type = Literal
+	w.Type = Block
 	s.scanUntil(w, lcurly, rcurly)
 }
 
@@ -329,7 +329,7 @@ func (s *Scanner) scanLiteral(w *Word, isDone func(rune) bool) {
 		s.str.WriteRune(s.escape())
 		s.read()
 	}
-	w.Type = Block
+	w.Type = Literal
 	w.Literal = s.str.String()
 }
 

@@ -4,11 +4,11 @@
 
 puts $::util::version
 
-proc greet {} {
+proc greet {msg {who foobar}} {
   ::util::defer { puts ">> done greet "}
-  puts "hello foobar (from greet)"
+  puts "$msg $who (from greet)"
 }
-greet
+greet "good morning" vietnam
 
 puts "enter mini.tcl"
 set foobar foobar
