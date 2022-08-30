@@ -28,12 +28,34 @@ type Value interface {
 	ToBoolean() (Value, error)
 }
 
+func isTrue(v Value) bool {
+  v, err := v.ToBoolean()
+  if err != nil {
+    return false
+  }
+  b, ok := v.(Boolean)
+  if !ok {
+    return ok
+  }
+  return b.value
+}
+
 type List struct {
 	values []Value
 }
 
+func ListFrom(vs ...Value) Value {
+  if len(vs) == 0 {
+    return EmptyList()
+  }
+  var i List
+  i.values = append(i.values, vs...)
+  return i
+}
+
 func EmptyList() Value {
-	return List{}
+  var i List
+	return i
 }
 
 func (i List) String() string {
@@ -124,7 +146,7 @@ func (b Boolean) String() string {
 }
 
 func (b Boolean) ToList() (Value, error) {
-	return nil, ErrCast
+	return ListFrom(b), nil
 }
 
 func (b Boolean) ToNumber() (Value, error) {
@@ -163,7 +185,7 @@ func (n Number) String() string {
 }
 
 func (n Number) ToList() (Value, error) {
-	return nil, ErrCast
+	return ListFrom(n), nil
 }
 
 func (n Number) ToNumber() (Value, error) {
@@ -396,6 +418,19 @@ func RunDefer(i *Interpreter, args []Value) (Value, error) {
 	return nil, nil
 }
 
+func RunProc(i *Interpreter, args []Value) (Value, error) {
+  var (
+    name = slices.Fst(args).String()
+    list = slices.Snd(args).String()
+    body = slices.Lst(args).String()
+  )
+  exec, err := createProcedure(name, body, list)
+  if err == nil {
+		i.RegisterProc(name, exec)
+  }
+	return nil, err
+}
+
 func RunSet(i *Interpreter, args []Value) (Value, error) {
 	i.Define(slices.Fst(args).String(), slices.Snd(args))
 	return slices.Snd(args), nil
@@ -427,9 +462,73 @@ func RunListLen(i *Interpreter, args []Value) (Value, error) {
 	return Int(int64(n.Len())), nil
 }
 
-type CommandSet map[string]CommandFunc
+type Executer interface {
+  Execute(*Interpreter, []Value) (Value, error)
+}
+
+type argument struct {
+  Name string
+  Default string
+}
+
+type procedure struct {
+  Name string
+  Body string
+  Args []argument
+}
+
+func createProcedure(name, body, args string) (Executer, error) {
+  p := procedure{
+    Name: name,
+    Body: body,
+  }
+  return p, nil
+}
+
+func (p procedure) Execute(i *Interpreter, args []Value) (Value, error) {
+  return i.Execute(strings.NewReader(p.Body))
+}
+
+type cmdExecuter struct {
+  fn CommandFunc
+}
+
+func fromCommandFunc(fn CommandFunc) Executer {
+  return cmdExecuter{fn: fn}
+}
+
+func (c cmdExecuter) Execute(i *Interpreter, args []Value) (Value, error) {
+  return c.fn(i, args)
+}
+
+type CommandSet map[string]Executer
+
+func EmptySet() CommandSet {
+  return make(CommandSet)
+}
+
+func DefaultSet() CommandSet {
+  set := EmptySet()
+
+  set.registerCmd("defer", fromCommandFunc(RunDefer))
+  set.registerCmd("puts", fromCommandFunc(RunPuts))
+  set.registerCmd("set", fromCommandFunc(RunSet))
+  set.registerCmd("unset", fromCommandFunc(RunUnset))
+  set.registerCmd("list", fromCommandFunc(RunList))
+  set.registerCmd("llength", fromCommandFunc(RunListLen))
+
+  return set
+}
+
+func (cs CommandSet) registerCmd(name string, exec Executer) {
+  cs[name] = exec
+}
 
 type Namespace struct {
+	Name     string
+	parent   *Namespace
+	children []*Namespace
+
 	env *Env
 	CommandSet
 }
@@ -439,6 +538,26 @@ func EmptyNS() *Namespace {
 		env:        EmptyEnv(),
 		CommandSet: make(CommandSet),
 	}
+}
+
+func GlobalNS() *Namespace {
+  return &Namespace{
+    CommandSet: DefaultSet(),
+  }
+}
+
+func (n *Namespace) Root() bool {
+  return n.parent == nil
+}
+
+func (n *Namespace) FQN() string {
+  if n.Root() {
+    return "::"
+  }
+  if n.parent.Root() {
+    return n.parent.FQN() + n.Name
+  }
+  return n.parent.FQN() + "::" + n.Name
 }
 
 type Frame struct {
@@ -456,10 +575,18 @@ func Prepare() *Frame {
 type Interpreter struct {
 	last   Value
 	frames []*Frame
+
+  root *Namespace
 }
 
 func Interpret() Interpreter {
-	return Interpreter{}
+	return Interpreter{
+    root: GlobalNS(),
+  }
+}
+
+func (i *Interpreter) RegisterProc(name string, exec Executer) {
+
 }
 
 func (i *Interpreter) Define(n string, v Value) {
@@ -526,6 +653,8 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 		exec = RunTypeOf
 	case "defer":
 		exec = RunDefer
+  case "proc":
+    exec = RunProc
 	default:
 		return nil, fmt.Errorf("command %s: %w", name, ErrUndefined)
 	}
