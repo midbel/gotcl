@@ -15,10 +15,17 @@ import (
 )
 
 var (
+	ErrArgument  = errors.New("wrong number of argument given")
 	ErrCast      = errors.New("type can not be casted")
 	ErrUndefined = errors.New("undefined name")
 	ErrSyntax    = errors.New("syntax error")
 )
+
+// type NamedTree[T any] struct {
+// 	Name string
+// 	Parent *T
+// 	Children []T
+// }
 
 type Value interface {
 	fmt.Stringer
@@ -485,67 +492,131 @@ func substitute(curr word.Word, i *Interpreter) (Value, error) {
 
 type CommandFunc func(*Interpreter, []Value) (Value, error)
 
-func RunTypeOf(i *Interpreter, args []Value) (Value, error) {
-	typ := fmt.Sprintf("%T", slices.Fst(args))
-	return Str(typ), nil
-}
-
-func RunDefer(i *Interpreter, args []Value) (Value, error) {
-	var (
-		name = fmt.Sprintf("defer%d", i.Count())
-		body = slices.Fst(args).String()
-	)
-	exec, _ := createProcedure(name, body, "")
-	i.registerDefer(exec)
-	return Str(""), nil
-}
-
-func RunProc(i *Interpreter, args []Value) (Value, error) {
-	var (
-		name = slices.Fst(args).String()
-		list = slices.Snd(args).String()
-		body = slices.Lst(args).String()
-	)
-	exec, err := createProcedure(name, body, list)
-	if err == nil {
-		i.RegisterProc(name, exec)
-	}
-	return nil, err
-}
-
-func RunSet(i *Interpreter, args []Value) (Value, error) {
-	i.Define(slices.Fst(args).String(), slices.Snd(args))
-	return slices.Snd(args), nil
-}
-
-func RunUnset(i *Interpreter, args []Value) (Value, error) {
-	i.Delete(slices.Fst(args).String())
-	return nil, nil
-}
-
-func RunPuts(i *Interpreter, args []Value) (Value, error) {
-	fmt.Fprintln(i.Out, slices.Fst(args))
-	return nil, nil
-}
-
-func RunList(i *Interpreter, args []Value) (Value, error) {
-	return slices.Fst(args).ToList()
-}
-
-func RunListLen(i *Interpreter, args []Value) (Value, error) {
-	list, err := slices.Fst(args).ToList()
-	if err != nil {
-		return nil, err
-	}
-	n, ok := list.(interface{ Len() int })
-	if !ok {
-		return Int(0), nil
-	}
-	return Int(int64(n.Len())), nil
-}
-
 type Executer interface {
 	Execute(*Interpreter, []Value) (Value, error)
+}
+
+type Builtin struct {
+	Name     string
+	Arity    int
+	Variadic bool
+	Run      CommandFunc
+}
+
+func (b Builtin) Execute(i *Interpreter, args []Value) (Value, error) {
+	if n := len(args); n != b.Arity {
+		if !b.Variadic || (b.Variadic && n < b.Arity) {
+			return nil, fmt.Errorf("%w: want %d, got %d", ErrArgument, b.Arity, n)
+		}
+	}
+	return b.Run(i, args)
+}
+
+func RunTypeOf() Executer {
+	return Builtin{
+		Name:  "typeof",
+		Arity: 1,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			typ := fmt.Sprintf("%T", slices.Fst(args))
+			return Str(typ), nil
+		},
+	}
+}
+
+func RunDefer() Executer {
+	return Builtin{
+		Name:  "defer",
+		Arity: 1,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			var (
+				name = fmt.Sprintf("defer%d", i.Count())
+				body = slices.Fst(args).String()
+			)
+			exec, _ := createProcedure(name, body, "")
+			i.registerDefer(exec)
+			return Str(""), nil
+		},
+	}
+}
+
+func RunProc() Executer {
+	return Builtin{
+		Name:  "proc",
+		Arity: 3,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			var (
+				name = slices.Fst(args).String()
+				list = slices.Snd(args).String()
+				body = slices.Lst(args).String()
+			)
+			exec, err := createProcedure(name, body, list)
+			if err == nil {
+				i.RegisterProc(name, exec)
+			}
+			return nil, err
+		},
+	}
+}
+
+func RunSet() Executer {
+	return Builtin{
+		Name:  "set",
+		Arity: 2,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			i.Define(slices.Fst(args).String(), slices.Snd(args))
+			return slices.Snd(args), nil
+		},
+	}
+}
+
+func RunUnset() Executer {
+	return Builtin{
+		Name:  "unset",
+		Arity: 1,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			i.Delete(slices.Fst(args).String())
+			return nil, nil
+		},
+	}
+}
+
+func RunPuts() Executer {
+	return Builtin{
+		Name:  "puts",
+		Arity: 1,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			fmt.Fprintln(i.Out, slices.Fst(args))
+			return nil, nil
+		},
+	}
+}
+
+func RunList() Executer {
+	return Builtin{
+		Name:  "list",
+		Arity: 1,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			return slices.Fst(args).ToList()
+		},
+	}
+}
+
+func RunListLen() Executer {
+	return Builtin{
+		Name:  "llength",
+		Arity: 1,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			list, err := slices.Fst(args).ToList()
+			if err != nil {
+				return nil, err
+			}
+			n, ok := list.(interface{ Len() int })
+			if !ok {
+				return Int(0), nil
+			}
+			return Int(int64(n.Len())), nil
+		},
+	}
 }
 
 type argument struct {
@@ -571,18 +642,6 @@ func (p procedure) Execute(i *Interpreter, args []Value) (Value, error) {
 	return i.Execute(strings.NewReader(p.Body))
 }
 
-type cmdExecuter struct {
-	fn CommandFunc
-}
-
-func fromCommandFunc(fn CommandFunc) Executer {
-	return cmdExecuter{fn: fn}
-}
-
-func (c cmdExecuter) Execute(i *Interpreter, args []Value) (Value, error) {
-	return c.fn(i, args)
-}
-
 type CommandSet map[string]Executer
 
 func EmptySet() CommandSet {
@@ -591,19 +650,19 @@ func EmptySet() CommandSet {
 
 func DefaultSet() CommandSet {
 	set := EmptySet()
-	set.registerCmd("puts", fromCommandFunc(RunPuts))
-	set.registerCmd("set", fromCommandFunc(RunSet))
-	set.registerCmd("unset", fromCommandFunc(RunUnset))
-	set.registerCmd("list", fromCommandFunc(RunList))
-	set.registerCmd("llength", fromCommandFunc(RunListLen))
-	set.registerCmd("proc", fromCommandFunc(RunProc))
+	set.registerCmd("puts", RunPuts())
+	set.registerCmd("set", RunSet())
+	set.registerCmd("unset", RunUnset())
+	set.registerCmd("list", RunList())
+	set.registerCmd("llength", RunListLen())
+	set.registerCmd("proc", RunProc())
 	return set
 }
 
 func UtilSet() CommandSet {
 	set := EmptySet()
-	set.registerCmd("defer", fromCommandFunc(RunDefer))
-	set.registerCmd("typeof", fromCommandFunc(RunTypeOf))
+	set.registerCmd("defer", RunDefer())
+	set.registerCmd("typeof", RunTypeOf())
 	return set
 }
 
