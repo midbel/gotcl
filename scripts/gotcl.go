@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -23,21 +24,66 @@ type Value interface {
 	fmt.Stringer
 
 	ToList() (Value, error)
+	ToArray() (Value, error)
 	ToNumber() (Value, error)
 	ToString() (Value, error)
 	ToBoolean() (Value, error)
 }
 
 func isTrue(v Value) bool {
-  v, err := v.ToBoolean()
-  if err != nil {
-    return false
-  }
-  b, ok := v.(Boolean)
-  if !ok {
-    return ok
-  }
-  return b.value
+	v, err := v.ToBoolean()
+	if err != nil {
+		return false
+	}
+	b, ok := v.(Boolean)
+	if !ok {
+		return ok
+	}
+	return b.value
+}
+
+type Array struct {
+	values map[string]Value
+}
+
+func ZipArr(keys []string, values []Value) Value {
+	return EmptyArr()
+}
+
+func EmptyArr() Value {
+	return Array{
+		values: make(map[string]Value),
+	}
+}
+
+func (a Array) String() string {
+	var str strings.Builder
+	for k, v := range a.values {
+		str.WriteString(k)
+		str.WriteString(" ")
+		str.WriteString(v.String())
+	}
+	return str.String()
+}
+
+func (a Array) ToList() (Value, error) {
+	return nil, nil
+}
+
+func (a Array) ToArray() (Value, error) {
+	return a, nil
+}
+
+func (a Array) ToNumber() (Value, error) {
+	return nil, ErrCast
+}
+
+func (a Array) ToString() (Value, error) {
+	return Str(a.String()), nil
+}
+
+func (a Array) ToBoolean() (Value, error) {
+	return Bool(len(a.values) != 0), nil
 }
 
 type List struct {
@@ -45,16 +91,16 @@ type List struct {
 }
 
 func ListFrom(vs ...Value) Value {
-  if len(vs) == 0 {
-    return EmptyList()
-  }
-  var i List
-  i.values = append(i.values, vs...)
-  return i
+	if len(vs) == 0 {
+		return EmptyList()
+	}
+	var i List
+	i.values = append(i.values, vs...)
+	return i
 }
 
 func EmptyList() Value {
-  var i List
+	var i List
 	return i
 }
 
@@ -72,6 +118,21 @@ func (i List) Len() int {
 
 func (i List) ToList() (Value, error) {
 	return i, nil
+}
+
+func (i List) ToArray() (Value, error) {
+	if len(i.values)%2 != 0 {
+		return nil, ErrCast
+	}
+	var (
+		ks []string
+		vs []Value
+	)
+	for j := 0; j < len(i.values); j += 2 {
+		ks = append(ks, i.values[j].String())
+		vs = append(vs, i.values[j+1])
+	}
+	return ZipArr(ks, vs), nil
 }
 
 func (i List) ToNumber() (Value, error) {
@@ -104,6 +165,14 @@ func (s String) String() string {
 
 func (s String) ToList() (Value, error) {
 	return split(s.value)
+}
+
+func (s String) ToArray() (Value, error) {
+	list, err := s.ToList()
+	if err != nil {
+		return nil, err
+	}
+	return list.ToArray()
 }
 
 func (s String) ToNumber() (Value, error) {
@@ -149,6 +218,10 @@ func (b Boolean) ToList() (Value, error) {
 	return ListFrom(b), nil
 }
 
+func (b Boolean) ToArray() (Value, error) {
+	return nil, ErrCast
+}
+
 func (b Boolean) ToNumber() (Value, error) {
 	if !b.value {
 		return Zero(), nil
@@ -186,6 +259,10 @@ func (n Number) String() string {
 
 func (n Number) ToList() (Value, error) {
 	return ListFrom(n), nil
+}
+
+func (n Number) ToArray() (Value, error) {
+	return nil, ErrCast
 }
 
 func (n Number) ToNumber() (Value, error) {
@@ -414,20 +491,25 @@ func RunTypeOf(i *Interpreter, args []Value) (Value, error) {
 }
 
 func RunDefer(i *Interpreter, args []Value) (Value, error) {
-	i.registerDefer(slices.Fst(args).String())
-	return nil, nil
+	var (
+		name = fmt.Sprintf("defer%d", i.Count())
+		body = slices.Fst(args).String()
+	)
+	exec, _ := createProcedure(name, body, "")
+	i.registerDefer(exec)
+	return Str(""), nil
 }
 
 func RunProc(i *Interpreter, args []Value) (Value, error) {
-  var (
-    name = slices.Fst(args).String()
-    list = slices.Snd(args).String()
-    body = slices.Lst(args).String()
-  )
-  exec, err := createProcedure(name, body, list)
-  if err == nil {
+	var (
+		name = slices.Fst(args).String()
+		list = slices.Snd(args).String()
+		body = slices.Lst(args).String()
+	)
+	exec, err := createProcedure(name, body, list)
+	if err == nil {
 		i.RegisterProc(name, exec)
-  }
+	}
 	return nil, err
 }
 
@@ -442,7 +524,7 @@ func RunUnset(i *Interpreter, args []Value) (Value, error) {
 }
 
 func RunPuts(i *Interpreter, args []Value) (Value, error) {
-	fmt.Println(slices.Fst(args))
+	fmt.Fprintln(i.Out, slices.Fst(args))
 	return nil, nil
 }
 
@@ -463,65 +545,70 @@ func RunListLen(i *Interpreter, args []Value) (Value, error) {
 }
 
 type Executer interface {
-  Execute(*Interpreter, []Value) (Value, error)
+	Execute(*Interpreter, []Value) (Value, error)
 }
 
 type argument struct {
-  Name string
-  Default string
+	Name    string
+	Default string
 }
 
 type procedure struct {
-  Name string
-  Body string
-  Args []argument
+	Name string
+	Body string
+	Args []argument
 }
 
 func createProcedure(name, body, args string) (Executer, error) {
-  p := procedure{
-    Name: name,
-    Body: body,
-  }
-  return p, nil
+	p := procedure{
+		Name: name,
+		Body: strings.TrimSpace(body),
+	}
+	return p, nil
 }
 
 func (p procedure) Execute(i *Interpreter, args []Value) (Value, error) {
-  return i.Execute(strings.NewReader(p.Body))
+	return i.Execute(strings.NewReader(p.Body))
 }
 
 type cmdExecuter struct {
-  fn CommandFunc
+	fn CommandFunc
 }
 
 func fromCommandFunc(fn CommandFunc) Executer {
-  return cmdExecuter{fn: fn}
+	return cmdExecuter{fn: fn}
 }
 
 func (c cmdExecuter) Execute(i *Interpreter, args []Value) (Value, error) {
-  return c.fn(i, args)
+	return c.fn(i, args)
 }
 
 type CommandSet map[string]Executer
 
 func EmptySet() CommandSet {
-  return make(CommandSet)
+	return make(CommandSet)
 }
 
 func DefaultSet() CommandSet {
-  set := EmptySet()
+	set := EmptySet()
+	set.registerCmd("puts", fromCommandFunc(RunPuts))
+	set.registerCmd("set", fromCommandFunc(RunSet))
+	set.registerCmd("unset", fromCommandFunc(RunUnset))
+	set.registerCmd("list", fromCommandFunc(RunList))
+	set.registerCmd("llength", fromCommandFunc(RunListLen))
+	set.registerCmd("proc", fromCommandFunc(RunProc))
+	return set
+}
 
-  set.registerCmd("defer", fromCommandFunc(RunDefer))
-  set.registerCmd("puts", fromCommandFunc(RunPuts))
-  set.registerCmd("set", fromCommandFunc(RunSet))
-  set.registerCmd("unset", fromCommandFunc(RunUnset))
-  set.registerCmd("list", fromCommandFunc(RunList))
-  set.registerCmd("llength", fromCommandFunc(RunListLen))
-
-  return set
+func UtilSet() CommandSet {
+	set := EmptySet()
+	set.registerCmd("defer", fromCommandFunc(RunDefer))
+	set.registerCmd("typeof", fromCommandFunc(RunTypeOf))
+	return set
 }
 
 func (cs CommandSet) registerCmd(name string, exec Executer) {
-  cs[name] = exec
+	cs[name] = exec
 }
 
 type Namespace struct {
@@ -531,91 +618,214 @@ type Namespace struct {
 
 	env *Env
 	CommandSet
+	unknown Executer
 }
 
-func EmptyNS() *Namespace {
-	return &Namespace{
-		env:        EmptyEnv(),
-		CommandSet: make(CommandSet),
-	}
+func EmptyNS(name string) *Namespace {
+	return createNS(name, make(CommandSet))
 }
 
 func GlobalNS() *Namespace {
-  return &Namespace{
-    CommandSet: DefaultSet(),
-  }
+	ns := createNS("", DefaultSet())
+	ns.RegisterNS(UtilNS())
+	return ns
+}
+
+func UtilNS() *Namespace {
+	ns := createNS("util", UtilSet())
+	return ns
+}
+
+func createNS(name string, set CommandSet) *Namespace {
+	return &Namespace{
+		Name:       name,
+		CommandSet: set,
+		env:        EmptyEnv(),
+	}
+}
+
+func (n *Namespace) Resolve(v string) (Value, error) {
+	return n.env.Resolve(v)
+}
+
+func (n *Namespace) RegisterNS(ns *Namespace) error {
+	ns.parent = n
+	x := sort.Search(len(n.children), func(i int) bool {
+		return ns.Name >= n.children[i].Name
+	})
+	if x < len(n.children) && n.children[x].Name == ns.Name {
+		return fmt.Errorf("namespace %s already exists", ns.Name)
+	}
+	tmp := append([]*Namespace{ns}, n.children[x:]...)
+	n.children = append(n.children[:x], tmp...)
+	return nil
+}
+
+func (n *Namespace) LookupNS(name []string) (*Namespace, error) {
+	if len(name) == 0 {
+		return n, nil
+	}
+	name, err := n.validNS(name)
+	if err != nil {
+		return nil, err
+	}
+	ns, err := n.lookupNS(name[0])
+	if err == nil {
+		if len(name) == 1 {
+			return ns, nil
+		}
+		return ns.LookupNS(name[1:])
+	}
+	return nil, err
+}
+
+func (n *Namespace) RegisterExec(name []string, exec Executer) error {
+	name, err := n.validNS(name)
+	if err != nil {
+		return err
+	}
+	if len(name) == 1 {
+		n.CommandSet[name[0]] = exec
+		return nil
+	}
+	ns, err := n.lookupNS(name[0])
+	if err == nil {
+		return ns.RegisterExec(name[1:], exec)
+	}
+	return err
+}
+
+func (n *Namespace) LookupExec(name []string) (Executer, error) {
+	name, err := n.validNS(name)
+	if err != nil {
+		return nil, err
+	}
+	if len(name) > 1 && len(n.children) == 0 {
+		return nil, fmt.Errorf("executer (lookup) %s: %w", name[0], ErrUndefined)
+	}
+	if len(name) == 1 {
+		exec, ok := n.CommandSet[name[0]]
+		if ok {
+			return exec, nil
+		}
+		if !n.Root() {
+			return n.parent.LookupExec(name)
+		}
+		return nil, fmt.Errorf("executer (lookup) %s: %w", name[0], ErrUndefined)
+	}
+	ns, err := n.lookupNS(name[0])
+	if err == nil {
+		return ns.LookupExec(name[1:])
+	}
+	return nil, err
 }
 
 func (n *Namespace) Root() bool {
-  return n.parent == nil
+	return n.parent == nil
 }
 
 func (n *Namespace) FQN() string {
-  if n.Root() {
-    return "::"
-  }
-  if n.parent.Root() {
-    return n.parent.FQN() + n.Name
-  }
-  return n.parent.FQN() + "::" + n.Name
+	if n.Root() {
+		return "::"
+	}
+	if n.parent.Root() {
+		return "::" + n.Name
+	}
+	return n.parent.FQN() + "::" + n.Name
+}
+
+func (n *Namespace) lookupNS(name string) (*Namespace, error) {
+	x := sort.Search(len(n.children), func(i int) bool {
+		return name >= n.children[i].Name
+	})
+	if x < len(n.children) && n.children[x].Name == name {
+		return n.children[x], nil
+	}
+	return nil, fmt.Errorf("namespace %s: %w", name, ErrUndefined)
+}
+
+func (n *Namespace) validNS(name []string) ([]string, error) {
+	if len(name) > 0 && name[0] == "" {
+		if !n.Root() {
+			return nil, fmt.Errorf("namespace %s: invalid name", name)
+		}
+		name = name[1:]
+	}
+	return name, nil
 }
 
 type Frame struct {
 	env      *Env
 	ns       *Namespace
-	deferred []string
+	deferred []Executer
 }
 
-func Prepare() *Frame {
-	return &Frame{
-		env: EmptyEnv(),
+func (f *Frame) Define(n string, v Value) {
+	f.env.Define(n, v)
+}
+
+func (f *Frame) Delete(n string) {
+	f.env.Delete(n)
+}
+
+func (f *Frame) Resolve(n string) (Value, error) {
+	v, err := f.env.Resolve(n)
+	if err == nil {
+		return v, err
 	}
+	return f.ns.Resolve(n)
 }
 
 type Interpreter struct {
 	last   Value
+	count  int
 	frames []*Frame
 
-  root *Namespace
+	Out io.Writer
+	Err io.Writer
+
+	name     string
+	parent   *Interpreter
+	children []*Interpreter
 }
 
-func Interpret() Interpreter {
-	return Interpreter{
-    root: GlobalNS(),
-  }
+func Interpret() *Interpreter {
+	i := Interpreter{
+		Out: os.Stdout,
+		Err: os.Stderr,
+	}
+	i.push(GlobalNS())
+	return &i
 }
 
 func (i *Interpreter) RegisterProc(name string, exec Executer) {
-
+	i.currentNS().RegisterExec([]string{name}, exec)
 }
 
 func (i *Interpreter) Define(n string, v Value) {
-	x := len(i.frames)
-	i.frames[x-1].env.Define(n, v)
+	i.currentFrame().Define(n, v)
 }
 
 func (i *Interpreter) Delete(n string) {
-	x := len(i.frames)
-	i.frames[x-1].env.Delete(n)
+	i.currentFrame().Delete(n)
 }
 
 func (i *Interpreter) Resolve(n string) (Value, error) {
-	x := len(i.frames)
-	v, err := i.frames[x-1].env.Resolve(n)
-	if err != nil && x > 0 {
-		x--
-		if x > 0 {
-			return i.frames[x-1].env.Resolve(n)
-		}
-		return nil, err
-	}
-	return v, err
+	return i.currentFrame().Resolve(n)
+}
+
+func (i *Interpreter) Depth() int {
+	return len(i.frames)
+}
+
+func (i *Interpreter) Count() int {
+	return i.count
 }
 
 func (i *Interpreter) Execute(r io.Reader) (Value, error) {
-	i.push()
-	defer i.executeDefer()
-
+	if i.currentNS().Root() && i.count == 0 {
+		defer i.executeDefer()
+	}
 	p, err := New(r)
 	if err != nil {
 		return nil, err
@@ -637,32 +847,39 @@ func (i *Interpreter) Execute(r io.Reader) (Value, error) {
 }
 
 func (i *Interpreter) execute(c *Command) (Value, error) {
-	var exec CommandFunc
-	switch name := c.Name.String(); name {
-	case "puts":
-		exec = RunPuts
-	case "set":
-		exec = RunSet
-	case "unset":
-		exec = RunUnset
-	case "list":
-		exec = RunList
-	case "llength":
-		exec = RunListLen
-	case "typeof":
-		exec = RunTypeOf
-	case "defer":
-		exec = RunDefer
-  case "proc":
-    exec = RunProc
-	default:
-		return nil, fmt.Errorf("command %s: %w", name, ErrUndefined)
+	var (
+		parts = strings.Split(c.Name.String(), "::")
+		ns    *Namespace
+		err   error
+	)
+	if n := len(parts); n > 1 {
+		ns, err = i.currentNS().LookupNS(parts[:len(parts)-1])
+	} else {
+		ns = i.currentNS()
 	}
-	return exec(i, c.Args)
+	if err != nil {
+		return nil, err
+	}
+	exec, err := ns.LookupExec(parts[len(parts)-1:])
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := exec.(procedure); ok {
+		i.push(ns)
+		defer i.executeDefer()
+	}
+	defer func() {
+		i.count++
+	}()
+	return exec.Execute(i, c.Args)
 }
 
-func (i *Interpreter) push() {
-	i.frames = append(i.frames, Prepare())
+func (i *Interpreter) push(ns *Namespace) {
+	f := &Frame{
+		env: EmptyEnv(),
+		ns:  ns,
+	}
+	i.frames = append(i.frames, f)
 }
 
 func (i *Interpreter) pop() {
@@ -673,21 +890,35 @@ func (i *Interpreter) pop() {
 	i.frames = i.frames[:n-1]
 }
 
-func (i *Interpreter) registerDefer(script string) {
-	x := len(i.frames)
-	i.frames[x-1].deferred = append(i.frames[x-1].deferred, script)
+func (i *Interpreter) rootNS() *Namespace {
+	f := slices.Fst(i.frames)
+	return f.ns
+}
+
+func (i *Interpreter) currentNS() *Namespace {
+	f := slices.Lst(i.frames)
+	return f.ns
+}
+
+func (i *Interpreter) currentFrame() *Frame {
+	return slices.Lst(i.frames)
+}
+
+func (i *Interpreter) registerDefer(exec Executer) {
+	curr := i.currentFrame()
+	curr.deferred = append(curr.deferred, exec)
 }
 
 func (i *Interpreter) executeDefer() {
 	defer i.pop()
 	var (
-		x = len(i.frames)
-		a = i.last
+		last = i.last
+		list = slices.Lst(i.frames).deferred
 	)
-	for _, str := range i.frames[x-1].deferred {
-		i.Execute(strings.NewReader(str))
+	for j := len(list) - 1; j >= 0; j-- {
+		list[j].Execute(i, nil)
 	}
-	i.last = a
+	i.last = last
 }
 
 func main() {

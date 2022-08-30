@@ -1,4 +1,13 @@
-defer { puts "leaving mini.tcl" }
+::util::defer {
+  puts "leaving mini.tcl"
+}
+
+proc greet {} {
+  ::util::defer { puts ">> done greet "}
+  puts "hello foobar (from greet)"
+}
+greet
+
 puts "enter mini.tcl"
 set foobar foobar
 puts $foobar
@@ -6,5 +15,5 @@ puts foo
 puts bar
 set done "all done ($foobar)"
 set mylist [list {fst snd lst}]
-puts [typeof $mylist]
+puts [::util::typeof $mylist]
 llength $mylist
