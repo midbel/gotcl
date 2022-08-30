@@ -692,6 +692,7 @@ func GlobalNS() *Namespace {
 
 func UtilNS() *Namespace {
 	ns := createNS("util", UtilSet())
+	ns.env.Define("version", Str("1.12.189"))
 	return ns
 }
 
@@ -870,7 +871,25 @@ func (i *Interpreter) Delete(n string) {
 }
 
 func (i *Interpreter) Resolve(n string) (Value, error) {
-	return i.currentFrame().Resolve(n)
+	name := strings.Split(n, "::")
+	if len(name) == 1 {
+		return i.currentFrame().Resolve(n)
+	}
+	var (
+		ps  = name[:len(name)-1]
+		vs  = name[len(name)-1]
+		ns  *Namespace
+		err error
+	)
+	if ps[0] == "" {
+		ns, err = i.rootNS().LookupNS(ps[1:])
+	} else {
+		ns, err = i.currentNS().LookupNS(ps)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ns.Resolve(vs)
 }
 
 func (i *Interpreter) Depth() int {
@@ -957,6 +976,10 @@ func (i *Interpreter) rootNS() *Namespace {
 func (i *Interpreter) currentNS() *Namespace {
 	f := slices.Lst(i.frames)
 	return f.ns
+}
+
+func (i *Interpreter) rootFrame() *Frame {
+	return slices.Fst(i.frames)
 }
 
 func (i *Interpreter) currentFrame() *Frame {

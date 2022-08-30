@@ -2,6 +2,8 @@
   puts "leaving mini.tcl"
 }
 
+puts $::util::version
+
 proc greet {} {
   ::util::defer { puts ">> done greet "}
   puts "hello foobar (from greet)"
