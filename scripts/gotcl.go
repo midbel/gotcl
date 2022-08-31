@@ -551,6 +551,22 @@ func combineCheck(cs ...func(Value) error) func(Value) error {
 	}
 }
 
+type Ensemble struct {
+	Name string
+	List []Builtin
+}
+
+func (e Ensemble) Execute(i *Interpreter, args []Value) (Value, error) {
+	name := slices.Fst(args).String()
+	x := sort.Search(len(e.List), func(i int) bool {
+		return e.List[i].Name >= name
+	})
+	if x >= len(e.List) || e.List[x].Name != name {
+		return nil, fmt.Errorf("%s %s: command not defined", e.Name, name)
+	}
+	return e.List[x].Execute(i, slices.Rest(args))
+}
+
 type Builtin struct {
 	Name     string
 	Arity    int
