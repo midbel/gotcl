@@ -585,6 +585,12 @@ func (b Builtin) parseOptions(i *Interpreter, args []Value) ([]Value, error) {
 	sort.Slice(b.Options, func(i, j int) bool {
 		return b.Options[i].Name < b.Options[j].Name
 	})
+	for _, o := range b.Options {
+		if o.Value == nil {
+			continue
+		}
+		i.Define(o.Name, o.Value)
+	}
 	var j int
 	for ; j < len(args) && j < len(b.Options); j++ {
 		str := args[j].String()
@@ -592,13 +598,12 @@ func (b Builtin) parseOptions(i *Interpreter, args []Value) ([]Value, error) {
 			break
 		}
 		str = strings.TrimPrefix(str, "-")
-		x := sort.Search(len(b.Options), func(i int) bool {
-			return b.Options[i].Name >= str
-		})
-		if x >= len(b.Options) || b.Options[x].Name != str {
-			return nil, fmt.Errorf("%s: option not supported", str)
+		x, err := isSet(b.Options, str)
+		if err != nil {
+			return nil, err
 		}
 		if b.Options[x].Flag {
+			i.Define(b.Options[x].Name, True())
 			continue
 		}
 		if check := b.Options[x].Check; check != nil {
@@ -606,16 +611,37 @@ func (b Builtin) parseOptions(i *Interpreter, args []Value) ([]Value, error) {
 				return nil, err
 			}
 			b.Options[j].Value = args[j+1]
-			i.Define(str, b.Options[j])
+			i.Define(str, b.Options[j].Value)
 		}
 		j++
 	}
-	for _, o := range b.Options {
-		if o.Required && o.Value == nil {
-			return nil, fmt.Errorf("%s: option is required", o.Name)
-		}
+	if err := isValid(b.Options); err != nil {
+		return nil, err
 	}
 	return args[j:], nil
+}
+
+func isValid(list []option) error {
+	ok := slices.Every(list, func(o option) bool {
+		if !o.Required {
+			return true
+		}
+		return o.Required && o.Value != nil
+	})
+	if !ok {
+		return fmt.Errorf("required options are not provided!")
+	}
+	return nil
+}
+
+func isSet(list []option, name string) (int, error) {
+	x := sort.Search(len(list), func(i int) bool {
+		return list[i].Name >= name
+	})
+	if x < len(list) && list[x].Name == name {
+		return x, nil
+	}
+	return 0, fmt.Errorf("%s: option not supported", name)
 }
 
 func RunTypeOf() Executer {
@@ -713,8 +739,21 @@ func RunPuts() Executer {
 			},
 		},
 		Run: func(i *Interpreter, args []Value) (Value, error) {
-			fmt.Fprintln(i.Out, slices.Fst(args))
-			return nil, nil
+			str, err := i.Resolve("channel")
+			if err != nil {
+				return nil, err
+			}
+			var ch io.Writer
+			switch str.String() {
+			case "stdout":
+				ch = i.Out
+			case "stderr":
+				ch = i.Err
+			default:
+				return nil, nil
+			}
+			fmt.Fprintln(ch, slices.Fst(args))
+			return Str(""), nil
 		},
 	}
 }
@@ -1137,6 +1176,9 @@ func (i *Interpreter) Execute(r io.Reader) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
+		// if i.last != nil {
+		// 	fmt.Fprintln(i.Out, ">> ", i.last)
+		// }
 	}
 	return i.last, nil
 }
