@@ -661,6 +661,10 @@ func parseArguments(str string) ([]argument, error) {
 		return nil, err
 	}
 	scan.KeepBlanks(false)
+	var (
+		seen  = make(map[string]struct{})
+		dummy = struct{}{}
+	)
 	for {
 		w := scan.Scan()
 		if w.Type == word.EOF {
@@ -669,18 +673,23 @@ func parseArguments(str string) ([]argument, error) {
 		if w.Type == word.Illegal {
 			return nil, ErrSyntax
 		}
+		var a argument
 		switch w.Type {
 		case word.Literal:
-			list = append(list, createArg(w.Literal, nil))
+			a = createArg(w.Literal, nil)
 		case word.Block:
 			ws, err := argWithDefault(w.Literal)
 			if err != nil {
 				return nil, err
 			}
-			list = append(list, createArg(ws[0], Str(ws[1])))
+			a = createArg(ws[0], Str(ws[1]))
 		default:
 			return nil, ErrSyntax
 		}
+		if _, ok := seen[a.Name]; ok {
+			return nil, fmt.Errorf("%s: duplicate argument", a.Name)
+		}
+		seen[a.Name] = dummy
 	}
 	return list, nil
 }
@@ -704,6 +713,9 @@ func createProcedure(name, body, args string) (Executer, error) {
 			return nil, err
 		}
 		p.Args = as
+		if a := slices.Lst(p.Args); a.Name == "args" {
+			p.Variadic = true
+		}
 	}
 	return p, nil
 }
