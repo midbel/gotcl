@@ -19,6 +19,7 @@ var (
 	ErrCast      = errors.New("type can not be casted")
 	ErrUndefined = errors.New("undefined name")
 	ErrSyntax    = errors.New("syntax error")
+	ErrType      = errors.New("wrong type given")
 )
 
 // type NamedTree[T any] struct {
@@ -496,20 +497,125 @@ type Executer interface {
 	Execute(*Interpreter, []Value) (Value, error)
 }
 
+type option struct {
+	Value
+	Name     string
+	Flag     bool
+	Required bool
+	Check    func(Value) error
+}
+
+func checkBool(v Value) error {
+	_, ok := v.(Boolean)
+	if !ok {
+		return ErrType
+	}
+	return nil
+}
+
+func checkNumber(v Value) error {
+	_, ok := v.(Number)
+	if !ok {
+		return ErrType
+	}
+	return nil
+}
+
+func checkString(v Value) error {
+	_, ok := v.(String)
+	if !ok {
+		return ErrType
+	}
+	return nil
+}
+
+func checkChannel(v Value) error {
+	switch v.String() {
+	case "stdout":
+	case "stderr":
+	default:
+		return fmt.Errorf("%s: unknown channel id", v.String())
+	}
+	return nil
+}
+
+func combineCheck(cs ...func(Value) error) func(Value) error {
+	return func(v Value) error {
+		for i := range cs {
+			if err := cs[i](v); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
 type Builtin struct {
 	Name     string
 	Arity    int
 	Variadic bool
 	Run      CommandFunc
+	Options  []option
 }
 
 func (b Builtin) Execute(i *Interpreter, args []Value) (Value, error) {
-	if n := len(args); n != b.Arity {
-		if !b.Variadic || (b.Variadic && n < b.Arity) {
-			return nil, fmt.Errorf("%w: want %d, got %d", ErrArgument, b.Arity, n)
-		}
+	args, err := b.parseOptions(i, args)
+	if err != nil {
+		return nil, err
+	}
+	if err := b.parseArgs(args); err != nil {
+		return nil, err
 	}
 	return b.Run(i, args)
+}
+
+func (b Builtin) parseArgs(args []Value) error {
+	if n := len(args); n != b.Arity {
+		if !b.Variadic || (b.Variadic && n < b.Arity) {
+			return fmt.Errorf("%w: want %d, got %d", ErrArgument, b.Arity, n)
+		}
+	}
+	return nil
+}
+
+func (b Builtin) parseOptions(i *Interpreter, args []Value) ([]Value, error) {
+	if len(b.Options) == 0 {
+		return args, nil
+	}
+	sort.Slice(b.Options, func(i, j int) bool {
+		return b.Options[i].Name < b.Options[j].Name
+	})
+	var j int
+	for ; j < len(args) && j < len(b.Options); j++ {
+		str := args[j].String()
+		if str == "--" || !strings.HasPrefix(str, "-") {
+			break
+		}
+		str = strings.TrimPrefix(str, "-")
+		x := sort.Search(len(b.Options), func(i int) bool {
+			return b.Options[i].Name >= str
+		})
+		if x >= len(b.Options) || b.Options[x].Name != str {
+			return nil, fmt.Errorf("%s: option not supported", str)
+		}
+		if b.Options[x].Flag {
+			continue
+		}
+		if check := b.Options[x].Check; check != nil {
+			if err := check(args[j+1]); err != nil {
+				return nil, err
+			}
+			b.Options[j].Value = args[j+1]
+			i.Define(str, b.Options[j])
+		}
+		j++
+	}
+	for _, o := range b.Options {
+		if o.Required && o.Value == nil {
+			return nil, fmt.Errorf("%s: option is required", o.Name)
+		}
+	}
+	return args[j:], nil
 }
 
 func RunTypeOf() Executer {
@@ -573,6 +679,14 @@ func RunUnset() Executer {
 	return Builtin{
 		Name:  "unset",
 		Arity: 1,
+		Options: []option{
+			{
+				Name:  "nocomplain",
+				Flag:  true,
+				Value: False(),
+				Check: checkBool,
+			},
+		},
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			i.Delete(slices.Fst(args).String())
 			return nil, nil
@@ -584,6 +698,20 @@ func RunPuts() Executer {
 	return Builtin{
 		Name:  "puts",
 		Arity: 1,
+		Options: []option{
+			{
+				Name:  "nonewline",
+				Flag:  true,
+				Value: False(),
+				Check: checkBool,
+			},
+			{
+				Name:     "channel",
+				Value:    Str("stdout"),
+				Required: true,
+				Check:    combineCheck(checkString, checkChannel),
+			},
+		},
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			fmt.Fprintln(i.Out, slices.Fst(args))
 			return nil, nil
@@ -690,6 +818,7 @@ func parseArguments(str string) ([]argument, error) {
 			return nil, fmt.Errorf("%s: duplicate argument", a.Name)
 		}
 		seen[a.Name] = dummy
+		list = append(list, a)
 	}
 	return list, nil
 }

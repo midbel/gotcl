@@ -12,10 +12,11 @@ greet "good morning" vietnam
 
 puts "enter mini.tcl"
 set foobar foobar
-puts $foobar
-puts foo
-puts bar
+puts -channel stdout $foobar
+puts -channel stdout foo
+puts -channel stdout bar
 set done "all done ($foobar)"
 set mylist [list {fst snd lst}]
 puts [::util::typeof $mylist]
+unset -nocomplain foobar
 llength $mylist
