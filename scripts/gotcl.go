@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -933,7 +934,7 @@ type Namespace struct {
 
 	env *Env
 	CommandSet
-	unknown Executer
+	unknown CommandFunc
 }
 
 func EmptyNS(name string) *Namespace {
@@ -943,6 +944,17 @@ func EmptyNS(name string) *Namespace {
 func GlobalNS() *Namespace {
 	ns := createNS("", DefaultSet())
 	ns.RegisterNS(UtilNS())
+	ns.unknown = func(i *Interpreter, args []Value) (Value, error) {
+		var (
+			name = slices.Fst(args).String()
+			values []string
+		)
+		for _, a := range slices.Rest(args) {
+			values = append(values, a.String())
+		}
+		res, err := exec.Command(name, values...).Output()
+		return Str(string(res)), err
+	}
 	return ns
 }
 
@@ -1199,6 +1211,9 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 	}
 	exec, err := ns.LookupExec(slices.Take(parts, len(parts)-1))
 	if err != nil {
+		if ns.unknown != nil {
+			return ns.unknown(i, slices.Prepend(c.Name, c.Args))
+		}
 		return nil, err
 	}
 	if _, ok := exec.(procedure); ok {

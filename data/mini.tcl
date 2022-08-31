@@ -2,6 +2,8 @@
   puts "leaving mini.tcl"
 }
 
+echo "echo from shell!!!"
+
 puts $::util::version
 
 proc greet {msg {who foobar}} {
