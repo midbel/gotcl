@@ -650,6 +650,7 @@ func (e Ensemble) Execute(i *Interpreter, args []Value) (Value, error) {
 
 type Builtin struct {
 	Name     string
+	Usage    string
 	Help     string
 	Arity    int
 	Variadic bool
@@ -770,6 +771,21 @@ func RunDefer() Executer {
 	}
 }
 
+func RunHelp() Executer {
+	return Builtin{
+		Name:  "help",
+		Help:  "retrieve help of given builtin command",
+		Arity: 1,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			help, err := i.GetHelp(slices.Fst(args).String())
+			if err != nil {
+				return nil, err
+			}
+			return Str(help), nil
+		},
+	}
+}
+
 func RunProc() Executer {
 	return Builtin{
 		Name:  "proc",
@@ -822,6 +838,7 @@ func RunUnset() Executer {
 func RunPuts() Executer {
 	return Builtin{
 		Name:  "puts",
+		Help:  "print a message to given channel (default to stdout)",
 		Arity: 1,
 		Options: []option{
 			{
@@ -1019,6 +1036,7 @@ func UtilSet() CommandSet {
 	set := EmptySet()
 	set.registerCmd("defer", RunDefer())
 	set.registerCmd("typeof", RunTypeOf())
+	set.registerCmd("help", RunHelp())
 	return set
 }
 
@@ -1128,7 +1146,7 @@ func (n *Namespace) LookupExec(name []string) (Executer, error) {
 		return nil, err
 	}
 	if len(name) > 1 && len(n.children) == 0 {
-		return nil, fmt.Errorf("executer (lookup) %s: %w", name[0], ErrUndefined)
+		return nil, fmt.Errorf("executer (lookup) %s (%s): %w", name[0], n.FQN(), ErrUndefined)
 	}
 	if len(name) == 1 {
 		exec, ok := n.CommandSet[name[0]]
@@ -1138,7 +1156,7 @@ func (n *Namespace) LookupExec(name []string) (Executer, error) {
 		if !n.Root() {
 			return n.parent.LookupExec(name)
 		}
-		return nil, fmt.Errorf("executer (lookup) %s: %w", name[0], ErrUndefined)
+		return nil, fmt.Errorf("executer (lookup) %s (%s): %w", name[0], n.FQN(), ErrUndefined)
 	}
 	ns, err := n.lookupNS(name[0])
 	if err == nil {
@@ -1168,7 +1186,7 @@ func (n *Namespace) lookupNS(name string) (*Namespace, error) {
 	if x < len(n.children) && n.children[x].Name == name {
 		return n.children[x], nil
 	}
-	return nil, fmt.Errorf("namespace %s: %w", name, ErrUndefined)
+	return nil, fmt.Errorf("namespace %s (%s): %w", name, n.FQN(), ErrUndefined)
 }
 
 func (n *Namespace) validNS(name []string) ([]string, error) {
@@ -1223,6 +1241,18 @@ func Interpret() *Interpreter {
 	}
 	i.push(GlobalNS())
 	return &i
+}
+
+func (i *Interpreter) GetHelp(name string) (string, error) {
+	exec, err := i.currentNS().LookupExec([]string{name})
+	if err != nil {
+		return "", err
+	}
+	b, ok := exec.(Builtin)
+	if !ok {
+		return "", fmt.Errorf("%s: can not retrieve help", name)
+	}
+	return b.Help, nil
 }
 
 func (i *Interpreter) RegisterProc(name string, exec Executer) {

@@ -17,6 +17,9 @@ set foobar foobar
 puts -channel stdout $foobar
 puts -channel stderr foo
 puts -channel stderr bar
+
+puts [::util::help puts]
+
 set done "all done ($foobar)"
 set mylist [list {fst snd lst}]
 puts [string tolower "HELLO WORLD"]
