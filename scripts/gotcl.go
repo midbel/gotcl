@@ -123,6 +123,14 @@ type List struct {
 	values []Value
 }
 
+func ListFromStrings(vs []string) Value {
+	var list []Value
+	for i := range vs {
+		list = append(list, Str(vs[i]))
+	}
+	return ListFrom(list...)
+}
+
 func ListFrom(vs ...Value) Value {
 	if len(vs) == 0 {
 		return EmptyList()
@@ -578,28 +586,67 @@ func combineCheck(cs ...func(Value) error) func(Value) error {
 type Ensemble struct {
 	Name string
 	Help string
-	List []Builtin
+	List []Executer
+}
+
+func MakeInterp() Executer {
+	return Ensemble{
+		Name: "interp",
+		List: []Executer{
+			Builtin{
+				Name: "create",
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return nil, nil
+				},
+			},
+			Builtin{
+				Name: "delete",
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return nil, nil
+				},
+			},
+			Builtin{
+				Name: "issafe",
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return Bool(i.safe), nil
+				},
+			},
+			Builtin{
+				Name: "eval",
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return nil, nil
+				},
+			},
+			Builtin{
+				Name: "children",
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					list := i.InterpretersList()
+					return ListFromStrings(list), nil
+				},
+			},
+		},
+	}
 }
 
 func MakeString() Executer {
 	e := Ensemble{
 		Name: "string",
-		List: []Builtin{
-			{
+		List: []Executer{
+			Builtin{
 				Name:  "tolower",
 				Arity: 1,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
 					return withString(slices.Fst(args), strings.ToLower)
 				},
 			},
-			{
+			Builtin{
 				Name:  "toupper",
 				Arity: 1,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
 					return withString(slices.Fst(args), strings.ToUpper)
 				},
 			},
-			{
+			Builtin{
 				Name:  "length",
 				Arity: 1,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
@@ -608,7 +655,7 @@ func MakeString() Executer {
 					})
 				},
 			},
-			{
+			Builtin{
 				Name:  "repeat",
 				Arity: 2,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
@@ -624,7 +671,7 @@ func MakeString() Executer {
 		},
 	}
 	sort.Slice(e.List, func(i, j int) bool {
-		return e.List[i].Name < e.List[j].Name
+		return getName(e.List[i]) < getName(e.List[j])
 	})
 	return e
 }
@@ -640,18 +687,32 @@ func withString(v Value, do func(str string) string) (Value, error) {
 func (e Ensemble) Execute(i *Interpreter, args []Value) (Value, error) {
 	name := slices.Fst(args).String()
 	x := sort.Search(len(e.List), func(i int) bool {
-		return e.List[i].Name >= name
+		return getName(e.List[i]) >= name
 	})
-	if x >= len(e.List) || e.List[x].Name != name {
+	if x >= len(e.List) || getName(e.List[x]) != name {
 		return nil, fmt.Errorf("%s %s: command not defined", e.Name, name)
 	}
 	return e.List[x].Execute(i, slices.Rest(args))
+}
+
+func getName(e Executer) string {
+	switch e := e.(type) {
+	case Builtin:
+		return e.Name
+	case Ensemble:
+		return e.Name
+	case procedure:
+		return e.Name
+	default:
+		return ""
+	}
 }
 
 type Builtin struct {
 	Name     string
 	Usage    string
 	Help     string
+	Safe     bool
 	Arity    int
 	Variadic bool
 	Run      CommandFunc
@@ -748,6 +809,7 @@ func RunTypeOf() Executer {
 	return Builtin{
 		Name:  "typeof",
 		Arity: 1,
+		Safe: true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			typ := fmt.Sprintf("%T", slices.Fst(args))
 			return Str(typ), nil
@@ -759,6 +821,7 @@ func RunDefer() Executer {
 	return Builtin{
 		Name:  "defer",
 		Arity: 1,
+		Safe: true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			var (
 				name = fmt.Sprintf("defer%d", i.Count())
@@ -776,6 +839,7 @@ func RunHelp() Executer {
 		Name:  "help",
 		Help:  "retrieve help of given builtin command",
 		Arity: 1,
+		Safe: true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			help, err := i.GetHelp(slices.Fst(args).String())
 			if err != nil {
@@ -790,6 +854,7 @@ func RunProc() Executer {
 	return Builtin{
 		Name:  "proc",
 		Arity: 3,
+		Safe: true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			var (
 				name = slices.Fst(args).String()
@@ -809,6 +874,7 @@ func RunSet() Executer {
 	return Builtin{
 		Name:  "set",
 		Arity: 2,
+		Safe: true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			i.Define(slices.Fst(args).String(), slices.Snd(args))
 			return slices.Snd(args), nil
@@ -820,6 +886,7 @@ func RunUnset() Executer {
 	return Builtin{
 		Name:  "unset",
 		Arity: 1,
+		Safe: true,
 		Options: []option{
 			{
 				Name:  "nocomplain",
@@ -840,6 +907,7 @@ func RunPuts() Executer {
 		Name:  "puts",
 		Help:  "print a message to given channel (default to stdout)",
 		Arity: 1,
+		Safe: true,
 		Options: []option{
 			{
 				Name:  "nonewline",
@@ -878,6 +946,7 @@ func RunList() Executer {
 	return Builtin{
 		Name:  "list",
 		Arity: 1,
+		Safe: true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			return slices.Fst(args).ToList()
 		},
@@ -888,6 +957,7 @@ func RunListLen() Executer {
 	return Builtin{
 		Name:  "llength",
 		Arity: 1,
+		Safe: true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			list, err := slices.Fst(args).ToList()
 			if err != nil {
@@ -1029,6 +1099,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("llength", RunListLen())
 	set.registerCmd("proc", RunProc())
 	set.registerCmd("string", MakeString())
+	set.registerCmd("interp", MakeInterp())
 	return set
 }
 
@@ -1224,6 +1295,7 @@ func (f *Frame) Resolve(n string) (Value, error) {
 type Interpreter struct {
 	last   Value
 	count  int
+	safe   bool
 	frames []*Frame
 
 	Out io.Writer
@@ -1243,16 +1315,41 @@ func Interpret() *Interpreter {
 	return &i
 }
 
+func (i *Interpreter) LookupInterpreter(name []string) (*Interpreter, error) {
+	return nil, nil
+}
+
+func (i *Interpreter) RegisterInterpreter(name []string) (string, error) {
+	return "", nil
+}
+
+func (i *Interpreter) UnregisterInterpreter(name []string) (string, error) {
+	return "", nil
+}
+
+func (i *Interpreter) InterpretersList() []string {
+	var list []string
+	for _, c := range i.children {
+		list = append(list, c.name)
+	}
+	return list
+}
+
 func (i *Interpreter) GetHelp(name string) (string, error) {
 	exec, err := i.currentNS().LookupExec([]string{name})
 	if err != nil {
 		return "", err
 	}
-	b, ok := exec.(Builtin)
-	if !ok {
+	var help string
+	switch e := exec.(type) {
+	case Builtin:
+		help = e.Help
+	case Ensemble:
+		help = e.Help
+	default:
 		return "", fmt.Errorf("%s: can not retrieve help", name)
 	}
-	return b.Help, nil
+	return help, nil
 }
 
 func (i *Interpreter) RegisterProc(name string, exec Executer) {
