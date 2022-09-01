@@ -19,6 +19,8 @@ puts -channel stderr foo
 puts -channel stderr bar
 set done "all done ($foobar)"
 set mylist [list {fst snd lst}]
+puts [string tolower "HELLO WORLD"]
+puts [string toupper "hello world"]
 puts [::util::typeof $mylist]
 unset -nocomplain foobar
 llength $mylist

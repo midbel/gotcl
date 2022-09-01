@@ -39,6 +39,30 @@ type Value interface {
 	ToBoolean() (Value, error)
 }
 
+func asInt(v Value) (int, error) {
+	n, err := v.ToNumber()
+	if err != nil {
+		return 0, err
+	}
+	x, ok := n.(Number)
+	if !ok {
+		return 0, nil
+	}
+	return int(x.value), nil
+}
+
+func asFloat(v Value) (float64, error) {
+	n, err := v.ToNumber()
+	if err != nil {
+		return 0, err
+	}
+	x, ok := n.(Number)
+	if !ok {
+		return 0, nil
+	}
+	return x.value, nil
+}
+
 func isTrue(v Value) bool {
 	v, err := v.ToBoolean()
 	if err != nil {
@@ -553,7 +577,64 @@ func combineCheck(cs ...func(Value) error) func(Value) error {
 
 type Ensemble struct {
 	Name string
+	Help string
 	List []Builtin
+}
+
+func MakeString() Executer {
+	e := Ensemble{
+		Name: "string",
+		List: []Builtin{
+			{
+				Name:  "tolower",
+				Arity: 1,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return withString(slices.Fst(args), strings.ToLower)
+				},
+			},
+			{
+				Name:  "toupper",
+				Arity: 1,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return withString(slices.Fst(args), strings.ToUpper)
+				},
+			},
+			{
+				Name:  "length",
+				Arity: 1,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return withString(slices.Fst(args), func(s string) string {
+						return strconv.Itoa(len(s))
+					})
+				},
+			},
+			{
+				Name:  "repeat",
+				Arity: 2,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					c, err := asInt(slices.Snd(args))
+					if err != nil {
+						return nil, err
+					}
+					return withString(slices.Fst(args), func(s string) string {
+						return strings.Repeat(s, c)
+					})
+				},
+			},
+		},
+	}
+	sort.Slice(e.List, func(i, j int) bool {
+		return e.List[i].Name < e.List[j].Name
+	})
+	return e
+}
+
+func withString(v Value, do func(str string) string) (Value, error) {
+	str, err := v.ToString()
+	if err != nil {
+		return nil, err
+	}
+	return Str(do(str.String())), nil
 }
 
 func (e Ensemble) Execute(i *Interpreter, args []Value) (Value, error) {
@@ -569,6 +650,7 @@ func (e Ensemble) Execute(i *Interpreter, args []Value) (Value, error) {
 
 type Builtin struct {
 	Name     string
+	Help     string
 	Arity    int
 	Variadic bool
 	Run      CommandFunc
@@ -929,6 +1011,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("list", RunList())
 	set.registerCmd("llength", RunListLen())
 	set.registerCmd("proc", RunProc())
+	set.registerCmd("string", MakeString())
 	return set
 }
 
@@ -962,7 +1045,7 @@ func GlobalNS() *Namespace {
 	ns.RegisterNS(UtilNS())
 	ns.unknown = func(i *Interpreter, args []Value) (Value, error) {
 		var (
-			name = slices.Fst(args).String()
+			name   = slices.Fst(args).String()
 			values []string
 		)
 		for _, a := range slices.Rest(args) {
