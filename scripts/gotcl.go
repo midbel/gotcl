@@ -33,6 +33,10 @@ type NamedTree[T any] struct {
 	Children []T
 }
 
+func (n NamedTree[T]) Root() bool {
+	return n.Parent == nil
+}
+
 func (n NamedTree[T]) GetName() string {
 	return n.Name
 }
@@ -536,6 +540,7 @@ type CommandFunc func(*Interpreter, []Value) (Value, error)
 
 type Executer interface {
 	Execute(*Interpreter, []Value) (Value, error)
+	IsSafe() bool
 }
 
 type option struct {
@@ -694,6 +699,10 @@ func withString(v Value, do func(str string) string) (Value, error) {
 	return Str(do(str.String())), nil
 }
 
+func (e Ensemble) IsSafe() bool {
+	return e.Safe
+}
+
 func (e Ensemble) GetName() string {
 	return e.Name
 }
@@ -731,6 +740,10 @@ type Builtin struct {
 	Variadic bool
 	Run      CommandFunc
 	Options  []option
+}
+
+func (b Builtin) IsSafe() bool {
+	return b.Safe
 }
 
 func (b Builtin) GetName() string {
@@ -1090,6 +1103,10 @@ func createProcedure(name, body, args string) (Executer, error) {
 		}
 	}
 	return p, nil
+}
+
+func (_ procedure) IsSafe() bool {
+	return true
 }
 
 func (p procedure) Execute(i *Interpreter, args []Value) (Value, error) {
@@ -1472,19 +1489,7 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 		}
 		return nil, err
 	}
-	var safe bool
-	switch e := exec.(type) {
-	case procedure:
-		i.push(ns)
-		defer i.executeDefer()
-		safe = true
-	case Builtin:
-		safe = i.isSafe(e.Safe)
-	case Ensemble:
-		safe = i.isSafe(e.Safe)
-	default:
-	}
-	if !safe {
+	if !i.isSafe(exec) {
 		return nil, fmt.Errorf("command: can not be execute in unsafe interpreter")
 	}
 	defer func() {
@@ -1493,11 +1498,11 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 	return exec.Execute(i, c.Args)
 }
 
-func (i *Interpreter) isSafe(safe bool) bool {
-	if i.Root() || !i.safe {
+func (i *Interpreter) isSafe(exec Executer) bool {
+	if i.Root() {
 		return true
 	}
-	return i.safe && safe
+	return !exec.IsSafe() || (i.safe && exec.IsSafe())
 }
 
 func (i *Interpreter) push(ns *Namespace) {
