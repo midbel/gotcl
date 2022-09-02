@@ -23,11 +23,19 @@ var (
 	ErrType      = errors.New("wrong type given")
 )
 
-// type NamedTree[T any] struct {
-// 	Name string
-// 	Parent *T
-// 	Children []T
-// }
+type Namer interface {
+	GetName() string
+}
+
+type NamedTree[T any] struct {
+	Name string
+	Parent *T
+	Children []T
+}
+
+func (n NamedTree[T]) GetName() string {
+	return n.Name
+}
 
 type Value interface {
 	fmt.Stringer
@@ -585,7 +593,9 @@ func combineCheck(cs ...func(Value) error) func(Value) error {
 
 type Ensemble struct {
 	Name string
+	Usage string
 	Help string
+	Safe bool
 	List []Executer
 }
 
@@ -684,6 +694,10 @@ func withString(v Value, do func(str string) string) (Value, error) {
 	return Str(do(str.String())), nil
 }
 
+func (e Ensemble) GetName() string {
+	return e.Name
+}
+
 func (e Ensemble) Execute(i *Interpreter, args []Value) (Value, error) {
 	name := slices.Fst(args).String()
 	x := sort.Search(len(e.List), func(i int) bool {
@@ -717,6 +731,10 @@ type Builtin struct {
 	Variadic bool
 	Run      CommandFunc
 	Options  []option
+}
+
+func (b Builtin) GetName() string {
+	return b.Name
 }
 
 func (b Builtin) Execute(i *Interpreter, args []Value) (Value, error) {
@@ -1160,6 +1178,10 @@ func createNS(name string, set CommandSet) *Namespace {
 	}
 }
 
+func (n *Namespace) GetName() string {
+	return n.Name
+}
+
 func (n *Namespace) Resolve(v string) (Value, error) {
 	return n.env.Resolve(v)
 }
@@ -1315,6 +1337,14 @@ func Interpret() *Interpreter {
 	return &i
 }
 
+func (i *Interpreter) Root() bool {
+	return i.parent == nil
+}
+
+func (i *Interpreter) GetName() string {
+	return i.name
+}
+
 func (i *Interpreter) LookupInterpreter(name []string) (*Interpreter, error) {
 	return nil, nil
 }
@@ -1442,14 +1472,32 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 		}
 		return nil, err
 	}
-	if _, ok := exec.(procedure); ok {
+	var safe bool
+	switch e := exec.(type) {
+	case procedure:
 		i.push(ns)
 		defer i.executeDefer()
+		safe = true
+	case Builtin:
+		safe = i.isSafe(e.Safe)
+	case Ensemble:
+		safe = i.isSafe(e.Safe)
+	default:
+	}
+	if !safe {
+		return nil, fmt.Errorf("command: can not be execute in unsafe interpreter")
 	}
 	defer func() {
 		i.count++
 	}()
 	return exec.Execute(i, c.Args)
+}
+
+func (i *Interpreter) isSafe(safe bool) bool {
+	if i.Root() || !i.safe {
+		return true
+	}
+	return i.safe && safe
 }
 
 func (i *Interpreter) push(ns *Namespace) {
