@@ -28,8 +28,8 @@ type Namer interface {
 }
 
 type NamedTree[T any] struct {
-	Name string
-	Parent *T
+	Name     string
+	Parent   *T
 	Children []T
 }
 
@@ -597,11 +597,11 @@ func combineCheck(cs ...func(Value) error) func(Value) error {
 }
 
 type Ensemble struct {
-	Name string
+	Name  string
 	Usage string
-	Help string
-	Safe bool
-	List []Executer
+	Help  string
+	Safe  bool
+	List  []Executer
 }
 
 func MakeInterp() Executer {
@@ -840,7 +840,7 @@ func RunTypeOf() Executer {
 	return Builtin{
 		Name:  "typeof",
 		Arity: 1,
-		Safe: true,
+		Safe:  true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			typ := fmt.Sprintf("%T", slices.Fst(args))
 			return Str(typ), nil
@@ -852,7 +852,7 @@ func RunDefer() Executer {
 	return Builtin{
 		Name:  "defer",
 		Arity: 1,
-		Safe: true,
+		Safe:  true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			var (
 				name = fmt.Sprintf("defer%d", i.Count())
@@ -870,7 +870,7 @@ func RunHelp() Executer {
 		Name:  "help",
 		Help:  "retrieve help of given builtin command",
 		Arity: 1,
-		Safe: true,
+		Safe:  true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			help, err := i.GetHelp(slices.Fst(args).String())
 			if err != nil {
@@ -885,7 +885,7 @@ func RunProc() Executer {
 	return Builtin{
 		Name:  "proc",
 		Arity: 3,
-		Safe: true,
+		Safe:  true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			var (
 				name = slices.Fst(args).String()
@@ -905,7 +905,7 @@ func RunSet() Executer {
 	return Builtin{
 		Name:  "set",
 		Arity: 2,
-		Safe: true,
+		Safe:  true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			i.Define(slices.Fst(args).String(), slices.Snd(args))
 			return slices.Snd(args), nil
@@ -917,7 +917,7 @@ func RunUnset() Executer {
 	return Builtin{
 		Name:  "unset",
 		Arity: 1,
-		Safe: true,
+		Safe:  true,
 		Options: []option{
 			{
 				Name:  "nocomplain",
@@ -933,12 +933,25 @@ func RunUnset() Executer {
 	}
 }
 
+func RunEval() Executer {
+	return Builtin{
+		Name:     "eval",
+		Help:     "eval given script",
+		Variadic: true,
+		Safe:     false,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			tmp := ListFrom(args...)
+			return i.Execute(strings.NewReader(tmp.String()))
+		},
+	}
+}
+
 func RunPuts() Executer {
 	return Builtin{
 		Name:  "puts",
 		Help:  "print a message to given channel (default to stdout)",
 		Arity: 1,
-		Safe: true,
+		Safe:  true,
 		Options: []option{
 			{
 				Name:  "nonewline",
@@ -977,7 +990,7 @@ func RunList() Executer {
 	return Builtin{
 		Name:  "list",
 		Arity: 1,
-		Safe: true,
+		Safe:  true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			return slices.Fst(args).ToList()
 		},
@@ -988,7 +1001,7 @@ func RunListLen() Executer {
 	return Builtin{
 		Name:  "llength",
 		Arity: 1,
-		Safe: true,
+		Safe:  true,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			list, err := slices.Fst(args).ToList()
 			if err != nil {
@@ -1135,6 +1148,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("proc", RunProc())
 	set.registerCmd("string", MakeString())
 	set.registerCmd("interp", MakeInterp())
+	set.registerCmd("eval", RunEval())
 	return set
 }
 
@@ -1491,6 +1505,10 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 	}
 	if !i.isSafe(exec) {
 		return nil, fmt.Errorf("command: can not be execute in unsafe interpreter")
+	}
+	if _, ok := exec.(procedure); ok {
+		i.push(ns)
+		defer i.executeDefer()
 	}
 	defer func() {
 		i.count++
