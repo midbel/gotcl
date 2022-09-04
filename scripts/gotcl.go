@@ -347,13 +347,25 @@ func (n Number) ToBoolean() (Value, error) {
 	return Bool(int(n.value) == 0), nil
 }
 
+type variable struct {
+	Value
+	refcount int
+}
+
+func createVariable(v Value) *variable {
+	return &variable{
+		Value:    v,
+		refcount: 1,
+	}
+}
+
 type Env struct {
-	values map[string]Value
+	values map[string]*variable
 }
 
 func EmptyEnv() *Env {
 	return &Env{
-		values: make(map[string]Value),
+		values: make(map[string]*variable),
 	}
 }
 
@@ -362,7 +374,11 @@ func (e *Env) Delete(n string) {
 }
 
 func (e *Env) Define(n string, v Value) {
-	e.values[n] = v
+	if vb, ok := e.values[n]; ok {
+		vb.Value = v
+	} else {
+		e.values[n] = createVariable(v)
+	}
 }
 
 func (e *Env) Resolve(n string) (Value, error) {
@@ -370,7 +386,7 @@ func (e *Env) Resolve(n string) (Value, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s: %w", n, ErrUndefined)
 	}
-	return v, nil
+	return v.Value, nil
 }
 
 type Command struct {
@@ -971,6 +987,38 @@ func RunProc() Executer {
 	}
 }
 
+func RunUpvar() Executer {
+	return Builtin{
+		Name:     "upvar",
+		Arity:    2,
+		Variadic: true,
+		Safe:     false,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			var level int
+			if n := len(args) % 2; n == 0 {
+				level++
+			} else {
+				x, err := asInt(slices.Fst(args))
+				if err != nil {
+					return nil, err
+				}
+				level = x
+				args = slices.Rest(args)
+			}
+			for j := 0; j < len(args); j += 2 {
+				var (
+					src = slices.At(args, j)
+					dst = slices.At(args, j+1)
+				)
+				if err := i.LinkVar(src.String(), dst.String(), level); err != nil {
+					return nil, err
+				}
+			}
+			return EmptyStr(), nil
+		},
+	}
+}
+
 func RunSet() Executer {
 	return Builtin{
 		Name:  "set",
@@ -1219,6 +1267,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("string", MakeString())
 	set.registerCmd("interp", MakeInterp())
 	set.registerCmd("eval", RunEval())
+	set.registerCmd("upvar", RunUpvar())
 	return set
 }
 
@@ -1430,12 +1479,30 @@ type Interpreter struct {
 }
 
 func Interpret() *Interpreter {
+	return defaultInterpreter("", true)
+}
+
+func defaultInterpreter(name string, safe bool) *Interpreter {
 	i := Interpreter{
-		Out: os.Stdout,
-		Err: os.Stderr,
+		Out:  os.Stdout,
+		Err:  os.Stderr,
+		safe: safe,
+		name: name,
 	}
 	i.push(GlobalNS())
 	return &i
+}
+
+func (i *Interpreter) LinkVar(src, dst string, level int) error {
+	if i.Depth() <= 1 {
+		return fmt.Errorf("can not link variables in global level")
+	}
+	depth := len(i.frames) - 1
+	if depth < level {
+		return fmt.Errorf("can not link variables in level %d", level)
+	}
+	depth -= level
+	return nil
 }
 
 func (i *Interpreter) Root() bool {
@@ -1471,9 +1538,7 @@ func (i *Interpreter) RegisterInterpreter(name []string, safe bool) (string, err
 	if err != nil {
 		return "", err
 	}
-	s := Interpret()
-	s.name = name[len(name)-1]
-	s.safe = safe
+	s := defaultInterpreter(name[len(name)-1], safe)
 	s.parent = p
 
 	x := sort.Search(len(p.children), func(i int) bool {
