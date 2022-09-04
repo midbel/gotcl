@@ -27,3 +27,6 @@ puts [string toupper "hello world"]
 puts [::util::typeof $mylist]
 unset -nocomplain foobar
 llength $mylist
+
+interp create -safe child
+interp eval child "puts test-from-child-interpreter"

@@ -51,6 +51,22 @@ type Value interface {
 	ToBoolean() (Value, error)
 }
 
+func asStringList(v Value) ([]string, error) {
+	v, err := v.ToList()
+	if err != nil {
+		return nil, err
+	}
+	x, ok := v.(List)
+	if !ok {
+		return nil, nil
+	}
+	var list []string
+	for i := range x.values {
+		list = append(list, x.values[i].String())
+	}
+	return list, nil
+}
+
 func asInt(v Value) (int, error) {
 	n, err := v.ToNumber()
 	if err != nil {
@@ -605,42 +621,96 @@ type Ensemble struct {
 }
 
 func MakeInterp() Executer {
-	return Ensemble{
+	e := Ensemble{
 		Name: "interp",
 		List: []Executer{
 			Builtin{
-				Name: "create",
+				Name:  "create",
+				Arity: 1,
+				Options: []option{
+					{
+						Name:  "safe",
+						Flag:  true,
+						Value: False(),
+						Check: checkBool,
+					},
+				},
 				Run: func(i *Interpreter, args []Value) (Value, error) {
-					return nil, nil
+					paths, err := asStringList(slices.Fst(args))
+					if err != nil {
+						return nil, err
+					}
+					safe, err := i.Resolve("safe")
+					if err != nil {
+						return nil, err
+					}
+					val, err := i.RegisterInterpreter(paths, isTrue(safe))
+					return Str(val), err
 				},
 			},
 			Builtin{
-				Name: "delete",
+				Name:  "delete",
+				Arity: 1,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
-					return nil, nil
+					paths, err := asStringList(slices.Fst(args))
+					if err != nil {
+						return nil, err
+					}
+					return nil, i.UnregisterInterpreter(paths)
 				},
 			},
 			Builtin{
-				Name: "issafe",
+				Name:  "issafe",
+				Arity: 1,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
-					return Bool(i.safe), nil
+					paths, err := asStringList(slices.Fst(args))
+					if err != nil {
+						return nil, err
+					}
+					i, err = i.LookupInterpreter(paths)
+					if err != nil {
+						return nil, err
+					}
+					return Bool(i.IsSafe()), nil
 				},
 			},
 			Builtin{
-				Name: "eval",
+				Name:     "eval",
+				Variadic: true,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
-					return nil, nil
+					paths, err := asStringList(slices.Fst(args))
+					if err != nil {
+						return nil, err
+					}
+					i, err = i.LookupInterpreter(paths)
+					if err != nil {
+						return nil, err
+					}
+					return i.Execute(strings.NewReader(slices.Snd(args).String()))
 				},
 			},
 			Builtin{
-				Name: "children",
+				Name:  "children",
+				Arity: 1,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
+					paths, err := asStringList(slices.Fst(args))
+					if err != nil {
+						return nil, err
+					}
+					i, err = i.LookupInterpreter(paths)
+					if err != nil {
+						return nil, err
+					}
 					list := i.InterpretersList()
 					return ListFromStrings(list), nil
 				},
 			},
 		},
 	}
+	sort.Slice(e.List, func(i, j int) bool {
+		return getName(e.List[i]) < getName(e.List[j])
+	})
+	return e
 }
 
 func MakeString() Executer {
@@ -764,7 +834,7 @@ func (b Builtin) Execute(i *Interpreter, args []Value) (Value, error) {
 func (b Builtin) parseArgs(args []Value) error {
 	if n := len(args); n != b.Arity {
 		if !b.Variadic || (b.Variadic && n < b.Arity) {
-			return fmt.Errorf("%w: want %d, got %d", ErrArgument, b.Arity, n)
+			return fmt.Errorf("%s: %w: want %d, got %d", b.Name, ErrArgument, b.Arity, n)
 		}
 	}
 	return nil
@@ -1376,16 +1446,66 @@ func (i *Interpreter) GetName() string {
 	return i.name
 }
 
+func (i *Interpreter) IsSafe() bool {
+	return i.safe
+}
+
 func (i *Interpreter) LookupInterpreter(name []string) (*Interpreter, error) {
-	return nil, nil
+	if len(name) == 0 {
+		return i, nil
+	}
+	x := sort.Search(len(i.children), func(j int) bool {
+		return i.children[j].name >= name[0]
+	})
+	if x < len(i.children) && i.children[x].name == name[0] {
+		if len(name) == 1 {
+			return i.children[x], nil
+		}
+		return i.children[x].LookupInterpreter((name[1:]))
+	}
+	return nil, fmt.Errorf("%s: interpreter not registered", name[0])
 }
 
-func (i *Interpreter) RegisterInterpreter(name []string) (string, error) {
-	return "", nil
+func (i *Interpreter) RegisterInterpreter(name []string, safe bool) (string, error) {
+	p, err := i.LookupInterpreter(name[:len(name)-1])
+	if err != nil {
+		return "", err
+	}
+	s := Interpret()
+	s.name = name[len(name)-1]
+	s.safe = safe
+	s.parent = p
+
+	x := sort.Search(len(p.children), func(i int) bool {
+		return p.children[i].name >= s.name
+	})
+	if x < len(p.children) && p.children[x].name == s.name {
+		return "", fmt.Errorf("%s: interpreter already registered", s.name)
+	}
+	tmp := append([]*Interpreter{s}, p.children[x:]...)
+	p.children = append(p.children, tmp...)
+	return s.name, nil
 }
 
-func (i *Interpreter) UnregisterInterpreter(name []string) (string, error) {
-	return "", nil
+func (i *Interpreter) UnregisterInterpreter(name []string) error {
+	p, err := i.LookupInterpreter(name[:len(name)-1])
+	if err != nil {
+		return err
+	}
+	if n := len(p.children); n == 0 {
+		return nil
+	} else if n == 1 {
+		p.children = p.children[:0]
+	}
+	n := name[len(name)-1]
+	x := sort.Search(len(p.children), func(i int) bool {
+		return p.children[i].name >= n
+	})
+	if x < len(p.children) && p.children[x].name == n {
+		return fmt.Errorf("%s: interpreter not registered", n)
+	}
+	p.children = append(p.children[:x], p.children[x+1:]...)
+	return nil
 }
 
 func (i *Interpreter) InterpretersList() []string {
@@ -1504,7 +1624,7 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 		return nil, err
 	}
 	if !i.isSafe(exec) {
-		return nil, fmt.Errorf("command: can not be execute in unsafe interpreter")
+		return nil, fmt.Errorf("command %s: can not be execute in unsafe interpreter", c.Name.String())
 	}
 	if _, ok := exec.(procedure); ok {
 		i.push(ns)
@@ -1520,7 +1640,7 @@ func (i *Interpreter) isSafe(exec Executer) bool {
 	if i.Root() {
 		return true
 	}
-	return !exec.IsSafe() || (i.safe && exec.IsSafe())
+	return !i.safe || (i.safe && exec.IsSafe())
 }
 
 func (i *Interpreter) push(ns *Namespace) {
