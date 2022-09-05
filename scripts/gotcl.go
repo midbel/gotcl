@@ -67,6 +67,19 @@ func asStringList(v Value) ([]string, error) {
 	return list, nil
 }
 
+func asLevel(v Value) (int, bool, error) {
+	var (
+		str = v.String()
+		abs bool
+	)
+	if strings.HasPrefix(str, "#") {
+		abs = true
+		str = strings.TrimPrefix(str, "#")
+	}
+	lvl, err := strconv.Atoi(str)
+	return lvl, abs, err
+}
+
 func asInt(v Value) (int, error) {
 	n, err := v.ToNumber()
 	if err != nil {
@@ -987,6 +1000,34 @@ func RunProc() Executer {
 	}
 }
 
+func RunUplevel() Executer {
+	return Builtin{
+		Name: "uplevel",
+		Arity: 1,
+		Variadic: true,
+		Safe: false,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			var (
+				level int
+				abs bool
+			)
+			if len(args) > 1 {
+				x, a, err := asLevel(slices.Fst(args))
+				if err != nil {
+					return nil, err
+				}
+				level, abs, args = x, a, slices.Rest(args)
+			} else {
+				level++
+			}
+			if !abs {
+				level = i.Depth() - level
+			}
+			return i.Level(strings.NewReader(slices.Fst(args).String()), level)
+		},
+	}
+}
+
 func RunUpvar() Executer {
 	return Builtin{
 		Name:     "upvar",
@@ -1268,6 +1309,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("interp", MakeInterp())
 	set.registerCmd("eval", RunEval())
 	set.registerCmd("upvar", RunUpvar())
+	set.registerCmd("uplevel", RunUplevel())
 	return set
 }
 
@@ -1638,6 +1680,15 @@ func (i *Interpreter) Depth() int {
 
 func (i *Interpreter) Count() int {
 	return i.count
+}
+
+func (i *Interpreter) Level(r io.Reader, level int) (Value, error) {
+	old := append([]*Frame{}, i.frames...)
+	defer func() {
+		i.frames = old
+	}()
+	i.frames = i.frames[:level]
+	return i.Execute(r)
 }
 
 func (i *Interpreter) Execute(r io.Reader) (Value, error) {
