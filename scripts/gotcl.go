@@ -645,6 +645,36 @@ type Ensemble struct {
 	List  []Executer
 }
 
+func MakeNamespace() Executer {
+	e := Ensemble{
+		Name: "namespace",
+		List: []Executer{
+			Builtin{
+				Name:  "eval",
+				Arity: 2,
+				Safe:  true,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					err := i.RegisterNS(slices.Fst(args).String(), slices.Snd(args).String())
+					return EmptyStr(), err
+				},
+			},
+			Builtin{
+				Name:  "delete",
+				Arity: 1,
+				Safe:  true,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					err := i.UnregisterNS(slices.Fst(args).String())
+					return EmptyStr(), err
+				},
+			},
+		},
+	}
+	sort.Slice(e.List, func(i, j int) bool {
+		return getName(e.List[i]) < getName(e.List[j])
+	})
+	return e
+}
+
 func MakeInterp() Executer {
 	e := Ensemble{
 		Name: "interp",
@@ -1328,6 +1358,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("upvar", RunUpvar())
 	set.registerCmd("uplevel", RunUplevel())
 	set.registerCmd("incr", RunIncr())
+	set.registerCmd("namespace", MakeNamespace())
 	return set
 }
 
@@ -1378,6 +1409,10 @@ func UtilNS() *Namespace {
 	ns := createNS("util", UtilSet())
 	ns.env.Define("version", Str("1.12.189"))
 	return ns
+}
+
+func emptyNS(name string) *Namespace {
+	return createNS(name, make(CommandSet))
 }
 
 func createNS(name string, set CommandSet) *Namespace {
@@ -1551,6 +1586,20 @@ func defaultInterpreter(name string, safe bool) *Interpreter {
 	}
 	i.push(GlobalNS())
 	return &i
+}
+
+func (i *Interpreter) RegisterNS(name, body string) error {
+	ns := emptyNS(name)
+	i.push(ns)
+	defer i.pop()
+	if _, err := i.Execute(strings.NewReader(body)); err != nil {
+		return err
+	}
+	return i.currentNS().RegisterNS(ns)
+}
+
+func (i *Interpreter) UnregisterNS(name string) error {
+	return nil
 }
 
 func (i *Interpreter) LinkVar(src, dst string, level int) error {
