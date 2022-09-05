@@ -28,5 +28,12 @@ puts [::util::typeof $mylist]
 unset -nocomplain foobar
 llength $mylist
 
-interp create -safe child
-interp eval child "puts test-from-child-interpreter"
+set count 1
+puts "count is: $count"
+proc printCount {} {
+  upvar count local
+  puts "printCount: $local"
+  incr local
+}
+printCount
+puts "count is: $count"

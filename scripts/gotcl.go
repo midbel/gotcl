@@ -360,25 +360,25 @@ func (n Number) ToBoolean() (Value, error) {
 	return Bool(int(n.value) == 0), nil
 }
 
-type variable struct {
+type Link struct {
 	Value
-	refcount int
+	level int
 }
 
-func createVariable(v Value) *variable {
-	return &variable{
-		Value:    v,
-		refcount: 1,
+func createLink(name string, level int) Value {
+	return Link{
+		Value: Str(name),
+		level: level,
 	}
 }
 
 type Env struct {
-	values map[string]*variable
+	values map[string]Value
 }
 
 func EmptyEnv() *Env {
 	return &Env{
-		values: make(map[string]*variable),
+		values: make(map[string]Value),
 	}
 }
 
@@ -387,11 +387,7 @@ func (e *Env) Delete(n string) {
 }
 
 func (e *Env) Define(n string, v Value) {
-	if vb, ok := e.values[n]; ok {
-		vb.Value = v
-	} else {
-		e.values[n] = createVariable(v)
-	}
+	e.values[n] = v
 }
 
 func (e *Env) Resolve(n string) (Value, error) {
@@ -399,7 +395,7 @@ func (e *Env) Resolve(n string) (Value, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s: %w", n, ErrUndefined)
 	}
-	return v.Value, nil
+	return v, nil
 }
 
 type Command struct {
@@ -1002,14 +998,14 @@ func RunProc() Executer {
 
 func RunUplevel() Executer {
 	return Builtin{
-		Name: "uplevel",
-		Arity: 1,
+		Name:     "uplevel",
+		Arity:    1,
 		Variadic: true,
-		Safe: false,
+		Safe:     false,
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			var (
 				level int
-				abs bool
+				abs   bool
 			)
 			if len(args) > 1 {
 				x, a, err := asLevel(slices.Fst(args))
@@ -1088,6 +1084,27 @@ func RunUnset() Executer {
 		Run: func(i *Interpreter, args []Value) (Value, error) {
 			i.Delete(slices.Fst(args).String())
 			return nil, nil
+		},
+	}
+}
+
+func RunIncr() Executer {
+	return Builtin{
+		Name:  "incr",
+		Arity: 1,
+		Safe:  true,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			v, err := i.Resolve(slices.Fst(args).String())
+			if err != nil {
+				return nil, err
+			}
+			n, err := asInt(v)
+			if err != nil {
+				return nil, err
+			}
+			res := Int(int64(n) + 1)
+			i.Define(slices.Fst(args).String(), res)
+			return res, nil
 		},
 	}
 }
@@ -1310,6 +1327,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("eval", RunEval())
 	set.registerCmd("upvar", RunUpvar())
 	set.registerCmd("uplevel", RunUplevel())
+	set.registerCmd("incr", RunIncr())
 	return set
 }
 
@@ -1539,11 +1557,12 @@ func (i *Interpreter) LinkVar(src, dst string, level int) error {
 	if i.Depth() <= 1 {
 		return fmt.Errorf("can not link variables in global level")
 	}
-	depth := len(i.frames) - 1
+	depth := i.Depth() - 1
 	if depth < level {
 		return fmt.Errorf("can not link variables in level %d", level)
 	}
 	depth -= level
+	i.currentFrame().Define(dst, createLink(src, depth))
 	return nil
 }
 
@@ -1645,17 +1664,39 @@ func (i *Interpreter) RegisterProc(name string, exec Executer) {
 }
 
 func (i *Interpreter) Define(n string, v Value) {
+	tmp, err := i.currentFrame().Resolve(n)
+	if err == nil {
+		k, ok := tmp.(Link)
+		if ok {
+			i.frames[k.level].env.Define(k.Value.String(), v)
+			return
+		}
+	}
 	i.currentFrame().Define(n, v)
 }
 
 func (i *Interpreter) Delete(n string) {
+	v, err := i.currentFrame().Resolve(n)
+	if err == nil {
+		k, ok := v.(Link)
+		if ok {
+			i.frames[k.level].env.Delete(k.Value.String())
+		}
+	}
 	i.currentFrame().Delete(n)
 }
 
 func (i *Interpreter) Resolve(n string) (Value, error) {
 	name := strings.Split(n, "::")
 	if len(name) == 1 {
-		return i.currentFrame().Resolve(n)
+		v, err := i.currentFrame().Resolve(n)
+		if err != nil {
+			return nil, err
+		}
+		if k, ok := v.(Link); ok {
+			v, err = i.frames[k.level].env.Resolve(k.Value.String())
+		}
+		return v, err
 	}
 	var (
 		ps  = slices.Slice(name)
@@ -1671,7 +1712,14 @@ func (i *Interpreter) Resolve(n string) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ns.Resolve(vs)
+	v, err := ns.Resolve(vs)
+	if err != nil {
+		return nil, err
+	}
+	if k, ok := v.(Link); ok {
+		v, err = i.frames[k.level].env.Resolve(k.Value.String())
+	}
+	return v, err
 }
 
 func (i *Interpreter) Depth() int {
