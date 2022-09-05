@@ -39,10 +39,13 @@ printCount
 puts "count is: $count"
 
 namespace eval engine {
-  proc up{} {
-    puts "engine::up"
+  proc up {} {
+    puts "<engine::up>"
   }
-  proc down{} {
-    puts "engine::down"
+  proc down {} {
+    puts "<engine::down>"
   }
 }
+
+engine::up
+engine::down

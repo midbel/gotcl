@@ -1590,12 +1590,15 @@ func defaultInterpreter(name string, safe bool) *Interpreter {
 
 func (i *Interpreter) RegisterNS(name, body string) error {
 	ns := emptyNS(name)
-	i.push(ns)
-	defer i.pop()
-	if _, err := i.Execute(strings.NewReader(body)); err != nil {
+	if err := i.currentNS().RegisterNS(ns); err != nil {
 		return err
 	}
-	return i.currentNS().RegisterNS(ns)
+	i.push(ns)
+	defer i.pop()
+
+	body = strings.TrimSpace(body)
+	_, err := i.Execute(strings.NewReader(body))
+	return err
 }
 
 func (i *Interpreter) UnregisterNS(name string) error {
