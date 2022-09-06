@@ -11,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/midbel/gotcl/env"
+	"github.com/midbel/gotcl/stdlib"
+	"github.com/midbel/gotcl/stdlib/argparse"
 	"github.com/midbel/gotcl/word"
 	"github.com/midbel/slices"
 )
@@ -20,7 +23,6 @@ var (
 	ErrCast      = errors.New("type can not be casted")
 	ErrUndefined = errors.New("undefined name")
 	ErrSyntax    = errors.New("syntax error")
-	ErrType      = errors.New("wrong type given")
 )
 
 type Namer interface {
@@ -41,374 +43,9 @@ func (n NamedTree[T]) GetName() string {
 	return n.Name
 }
 
-type Value interface {
-	fmt.Stringer
-
-	ToList() (Value, error)
-	ToArray() (Value, error)
-	ToNumber() (Value, error)
-	ToString() (Value, error)
-	ToBoolean() (Value, error)
-}
-
-func asStringList(v Value) ([]string, error) {
-	v, err := v.ToList()
-	if err != nil {
-		return nil, err
-	}
-	x, ok := v.(List)
-	if !ok {
-		return nil, nil
-	}
-	var list []string
-	for i := range x.values {
-		list = append(list, x.values[i].String())
-	}
-	return list, nil
-}
-
-func asLevel(v Value) (int, bool, error) {
-	var (
-		str = v.String()
-		abs bool
-	)
-	if strings.HasPrefix(str, "#") {
-		abs = true
-		str = strings.TrimPrefix(str, "#")
-	}
-	lvl, err := strconv.Atoi(str)
-	return lvl, abs, err
-}
-
-func asInt(v Value) (int, error) {
-	n, err := v.ToNumber()
-	if err != nil {
-		return 0, err
-	}
-	x, ok := n.(Number)
-	if !ok {
-		return 0, nil
-	}
-	return int(x.value), nil
-}
-
-func asFloat(v Value) (float64, error) {
-	n, err := v.ToNumber()
-	if err != nil {
-		return 0, err
-	}
-	x, ok := n.(Number)
-	if !ok {
-		return 0, nil
-	}
-	return x.value, nil
-}
-
-func isTrue(v Value) bool {
-	v, err := v.ToBoolean()
-	if err != nil {
-		return false
-	}
-	b, ok := v.(Boolean)
-	if !ok {
-		return ok
-	}
-	return b.value
-}
-
-type Array struct {
-	values map[string]Value
-}
-
-func ZipArr(keys []string, values []Value) Value {
-	return EmptyArr()
-}
-
-func EmptyArr() Value {
-	return Array{
-		values: make(map[string]Value),
-	}
-}
-
-func (a Array) Get(n string) Value {
-	return a.values[n]
-}
-
-func (a Array) Set(n string, v Value) {
-	a.values[n] = v
-}
-
-func (a Array) String() string {
-	var str strings.Builder
-	for k, v := range a.values {
-		str.WriteString(k)
-		str.WriteString(" ")
-		str.WriteString(v.String())
-	}
-	return str.String()
-}
-
-func (a Array) ToList() (Value, error) {
-	return nil, nil
-}
-
-func (a Array) ToArray() (Value, error) {
-	return a, nil
-}
-
-func (a Array) ToNumber() (Value, error) {
-	return nil, ErrCast
-}
-
-func (a Array) ToString() (Value, error) {
-	return Str(a.String()), nil
-}
-
-func (a Array) ToBoolean() (Value, error) {
-	return Bool(len(a.values) != 0), nil
-}
-
-type List struct {
-	values []Value
-}
-
-func ListFromStrings(vs []string) Value {
-	var list []Value
-	for i := range vs {
-		list = append(list, Str(vs[i]))
-	}
-	return ListFrom(list...)
-}
-
-func ListFrom(vs ...Value) Value {
-	if len(vs) == 0 {
-		return EmptyList()
-	}
-	var i List
-	i.values = append(i.values, vs...)
-	return i
-}
-
-func EmptyList() Value {
-	var i List
-	return i
-}
-
-func (i List) String() string {
-	var list []string
-	for _, v := range i.values {
-		list = append(list, v.String())
-	}
-	return strings.Join(list, " ")
-}
-
-func (i List) Len() int {
-	return len(i.values)
-}
-
-func (i List) ToList() (Value, error) {
-	return i, nil
-}
-
-func (i List) ToArray() (Value, error) {
-	if len(i.values)%2 != 0 {
-		return nil, ErrCast
-	}
-	var (
-		ks []string
-		vs []Value
-	)
-	for j := 0; j < len(i.values); j += 2 {
-		ks = append(ks, i.values[j].String())
-		vs = append(vs, i.values[j+1])
-	}
-	return ZipArr(ks, vs), nil
-}
-
-func (i List) ToNumber() (Value, error) {
-	return nil, ErrCast
-}
-
-func (i List) ToString() (Value, error) {
-	return Str(i.String()), nil
-}
-
-func (i List) ToBoolean() (Value, error) {
-	return nil, ErrCast
-}
-
-type String struct {
-	value string
-}
-
-func Str(str string) Value {
-	return String{value: str}
-}
-
-func EmptyStr() Value {
-	return Str("")
-}
-
-func (s String) String() string {
-	return s.value
-}
-
-func (s String) ToList() (Value, error) {
-	return split(s.value)
-}
-
-func (s String) ToArray() (Value, error) {
-	list, err := s.ToList()
-	if err != nil {
-		return nil, err
-	}
-	return list.ToArray()
-}
-
-func (s String) ToNumber() (Value, error) {
-	n, err := strconv.ParseFloat(s.value, 64)
-	if err != nil {
-		return nil, err
-	}
-	return Float(n), nil
-}
-
-func (s String) ToString() (Value, error) {
-	return s, nil
-}
-
-func (s String) ToBoolean() (Value, error) {
-	return Bool(s.value != ""), nil
-}
-
-type Boolean struct {
-	value bool
-}
-
-func False() Value {
-	return Bool(false)
-}
-
-func True() Value {
-	return Bool(true)
-}
-
-func Bool(b bool) Value {
-	return Boolean{value: b}
-}
-
-func (b Boolean) String() string {
-	if b.value {
-		return "1"
-	}
-	return "0"
-}
-
-func (b Boolean) ToList() (Value, error) {
-	return ListFrom(b), nil
-}
-
-func (b Boolean) ToArray() (Value, error) {
-	return nil, ErrCast
-}
-
-func (b Boolean) ToNumber() (Value, error) {
-	if !b.value {
-		return Zero(), nil
-	}
-	return Float(1), nil
-}
-
-func (b Boolean) ToString() (Value, error) {
-	return Str(b.String()), nil
-}
-
-func (b Boolean) ToBoolean() (Value, error) {
-	return b, nil
-}
-
-type Number struct {
-	value float64
-}
-
-func Float(f float64) Value {
-	return Number{value: f}
-}
-
-func Int(i int64) Value {
-	return Float(float64(i))
-}
-
-func Zero() Value {
-	return Float(0)
-}
-
-func (n Number) String() string {
-	return strconv.FormatFloat(n.value, 'g', -1, 64)
-}
-
-func (n Number) ToList() (Value, error) {
-	return ListFrom(n), nil
-}
-
-func (n Number) ToArray() (Value, error) {
-	return nil, ErrCast
-}
-
-func (n Number) ToNumber() (Value, error) {
-	return n, nil
-}
-
-func (n Number) ToString() (Value, error) {
-	str := strconv.FormatFloat(n.value, 'g', -1, 64)
-	return Str(str), nil
-}
-
-func (n Number) ToBoolean() (Value, error) {
-	return Bool(int(n.value) == 0), nil
-}
-
-type Link struct {
-	Value
-	level int
-}
-
-func createLink(name string, level int) Value {
-	return Link{
-		Value: Str(name),
-		level: level,
-	}
-}
-
-type Env struct {
-	values map[string]Value
-}
-
-func EmptyEnv() *Env {
-	return &Env{
-		values: make(map[string]Value),
-	}
-}
-
-func (e *Env) Delete(n string) {
-	delete(e.values, n)
-}
-
-func (e *Env) Define(n string, v Value) {
-	e.values[n] = v
-}
-
-func (e *Env) Resolve(n string) (Value, error) {
-	v, ok := e.values[n]
-	if !ok {
-		return nil, fmt.Errorf("%s: %w", n, ErrUndefined)
-	}
-	return v, nil
-}
-
 type Command struct {
-	Name Value
-	Args []Value
+	Name env.Value
+	Args []env.Value
 }
 
 type Parser struct {
@@ -454,9 +91,9 @@ func (p *Parser) Parse(i *Interpreter) (*Command, error) {
 	return &c, nil
 }
 
-func (p *Parser) parse(i *Interpreter) (Value, error) {
+func (p *Parser) parse(i *Interpreter) (env.Value, error) {
 	p.skipBlank()
-	var vs []Value
+	var vs []env.Value
 	for !p.isEnd() {
 		if p.curr.Type == word.Illegal {
 			return nil, ErrSyntax
@@ -509,7 +146,7 @@ func (p *Parser) isBlank() bool {
 	return p.curr.Type == word.Blank
 }
 
-func list2str(list []Value) Value {
+func list2str(list []env.Value) env.Value {
 	if len(list) == 1 {
 		return list[0]
 	}
@@ -517,49 +154,16 @@ func list2str(list []Value) Value {
 	for i := range list {
 		str.WriteString(list[i].String())
 	}
-	return Str(str.String())
+	return env.Str(str.String())
 }
 
-func split(str string) (Value, error) {
-	str = strings.TrimSpace(str)
-	scan, err := word.Scan(strings.NewReader(str))
-	if err != nil {
-		return nil, err
-	}
-	var list List
-	for {
-		w := scan.Scan()
-		if w.Type == word.EOF {
-			break
-		}
-		if w.Type == word.Blank {
-			continue
-		}
-		switch w.Type {
-		case word.Literal:
-		case word.Block:
-			w.Literal = fmt.Sprintf("{%s}", w.Literal)
-		case word.Variable:
-			w.Literal = fmt.Sprintf("$%s", w.Literal)
-		case word.Script:
-			w.Literal = fmt.Sprintf("[%s]", w.Literal)
-		case word.Quote:
-			w.Literal = fmt.Sprintf("\"%s\"", w.Literal)
-		default:
-			return nil, fmt.Errorf("%s: %w", w, ErrSyntax)
-		}
-		list.values = append(list.values, Str(w.Literal))
-	}
-	return list, nil
-}
-
-func substitute(curr word.Word, i *Interpreter) (Value, error) {
-	split := func(str string, i *Interpreter) (Value, error) {
+func substitute(curr word.Word, i *Interpreter) (env.Value, error) {
+	split := func(str string, i *Interpreter) (env.Value, error) {
 		scan, err := word.Scan(strings.NewReader(str))
 		if err != nil {
 			return nil, err
 		}
-		var list []Value
+		var list []env.Value
 		for {
 			w := scan.Split()
 			if w.Type == word.EOF {
@@ -574,12 +178,12 @@ func substitute(curr word.Word, i *Interpreter) (Value, error) {
 		return list2str(list), nil
 	}
 	var (
-		val Value
+		val env.Value
 		err error
 	)
 	switch curr.Type {
 	case word.Literal, word.Block:
-		val = Str(curr.Literal)
+		val = env.Str(curr.Literal)
 	case word.Variable:
 		val, err = i.Resolve(curr.Literal)
 	case word.Quote:
@@ -613,46 +217,7 @@ func scan(str string) ([]string, error) {
 	return list, nil
 }
 
-type CommandFunc func(*Interpreter, []Value) (Value, error)
-
-type Executer interface {
-	Execute(*Interpreter, []Value) (Value, error)
-	IsSafe() bool
-}
-
-type option struct {
-	Value
-	Name     string
-	Flag     bool
-	Required bool
-	Check    func(Value) error
-}
-
-func checkBool(v Value) error {
-	_, ok := v.(Boolean)
-	if !ok {
-		return ErrType
-	}
-	return nil
-}
-
-func checkNumber(v Value) error {
-	_, ok := v.(Number)
-	if !ok {
-		return ErrType
-	}
-	return nil
-}
-
-func checkString(v Value) error {
-	_, ok := v.(String)
-	if !ok {
-		return ErrType
-	}
-	return nil
-}
-
-func checkChannel(v Value) error {
+func checkChannel(v env.Value) error {
 	switch v.String() {
 	case "stdout":
 	case "stderr":
@@ -662,45 +227,26 @@ func checkChannel(v Value) error {
 	return nil
 }
 
-func combineCheck(cs ...func(Value) error) func(Value) error {
-	return func(v Value) error {
-		for i := range cs {
-			if err := cs[i](v); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
-type Ensemble struct {
-	Name  string
-	Usage string
-	Help  string
-	Safe  bool
-	List  []Executer
-}
-
-func MakeNamespace() Executer {
-	e := Ensemble{
+func MakeNamespace() stdlib.Executer {
+	e := stdlib.Ensemble{
 		Name: "namespace",
-		List: []Executer{
-			Builtin{
+		List: []stdlib.Executer{
+			stdlib.Builtin{
 				Name:  "eval",
 				Arity: 2,
 				Safe:  true,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					err := i.RegisterNS(slices.Fst(args).String(), slices.Snd(args).String())
-					return EmptyStr(), err
+					return env.EmptyStr(), err
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "delete",
 				Arity: 1,
 				Safe:  true,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					err := i.UnregisterNS(slices.Fst(args).String())
-					return EmptyStr(), err
+					return env.EmptyStr(), err
 				},
 			},
 		},
@@ -711,17 +257,17 @@ func MakeNamespace() Executer {
 	return e
 }
 
-func MakeArray() Executer {
-	e := Ensemble{
+func MakeArray() stdlib.Executer {
+	e := stdlib.Ensemble{
 		Name: "array",
-		List: []Executer{
-			Builtin{
+		List: []stdlib.Executer{
+			stdlib.Builtin{
 				Name:  "set",
 				Arity: 2,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					arr, err := i.Resolve(slices.Fst(args).String())
 					if err != nil {
-						arr = EmptyArr()
+						arr = env.EmptyArr()
 					}
 					list, err := scan(slices.Snd(args).String())
 					if err != nil {
@@ -730,18 +276,18 @@ func MakeArray() Executer {
 					if len(list)%2 != 0 {
 						return nil, fmt.Errorf("invalid length")
 					}
-					s := arr.(Array)
+					s := arr.(env.Array)
 					for i := 0; i < len(list); i += 2 {
-						s.Set(list[i], Str(list[i+1]))
+						s.Set(list[i], env.Str(list[i+1]))
 					}
 					i.Define(slices.Fst(args).String(), s)
 					return nil, nil
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "get",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					arr, err := i.Resolve(slices.Fst(args).String())
 					if err != nil {
 						return nil, err
@@ -751,19 +297,19 @@ func MakeArray() Executer {
 						return nil, err
 					}
 					var (
-						g  = arr.(Array)
-						vs []Value
+						g  = arr.(env.Array)
+						vs []env.Value
 					)
 					for k, v := range g.values {
-						vs = append(vs, ListFrom(Str(k), v))
+						vs = append(vs, env.ListFrom(env.Str(k), v))
 					}
-					return ListFrom(vs...), nil
+					return env.ListFrom(vs...), nil
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "names",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					arr, err := i.Resolve(slices.Fst(args).String())
 					if err != nil {
 						return nil, err
@@ -773,19 +319,19 @@ func MakeArray() Executer {
 						return nil, err
 					}
 					var (
-						g  = arr.(Array)
+						g  = arr.(env.Array)
 						vs []string
 					)
 					for k := range g.values {
 						vs = append(vs, k)
 					}
-					return ListFromStrings(vs), nil
+					return env.ListFromStrings(vs), nil
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "size",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					return nil, nil
 				},
 			},
@@ -797,23 +343,23 @@ func MakeArray() Executer {
 	return e
 }
 
-func MakeInterp() Executer {
-	e := Ensemble{
+func MakeInterp() stdlib.Executer {
+	e := stdlib.Ensemble{
 		Name: "interp",
-		List: []Executer{
-			Builtin{
+		List: []stdlib.Executer{
+			stdlib.Builtin{
 				Name:  "create",
 				Arity: 1,
-				Options: []option{
+				Options: []argparse.Option{
 					{
 						Name:  "safe",
 						Flag:  true,
-						Value: False(),
-						Check: checkBool,
+						Value: env.False(),
+						Check: argparse.CheckBool,
 					},
 				},
-				Run: func(i *Interpreter, args []Value) (Value, error) {
-					paths, err := asStringList(slices.Fst(args))
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+					paths, err := env.ToStringList(slices.Fst(args))
 					if err != nil {
 						return nil, err
 					}
@@ -821,26 +367,26 @@ func MakeInterp() Executer {
 					if err != nil {
 						return nil, err
 					}
-					val, err := i.RegisterInterpreter(paths, isTrue(safe))
-					return Str(val), err
+					val, err := i.RegisterInterpreter(paths, env.ToBool(safe))
+					return env.Str(val), err
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "delete",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
-					paths, err := asStringList(slices.Fst(args))
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+					paths, err := env.ToStringList(slices.Fst(args))
 					if err != nil {
 						return nil, err
 					}
 					return nil, i.UnregisterInterpreter(paths)
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "issafe",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
-					paths, err := asStringList(slices.Fst(args))
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+					paths, err := env.ToStringList(slices.Fst(args))
 					if err != nil {
 						return nil, err
 					}
@@ -848,14 +394,14 @@ func MakeInterp() Executer {
 					if err != nil {
 						return nil, err
 					}
-					return Bool(i.IsSafe()), nil
+					return env.Bool(i.IsSafe()), nil
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:     "eval",
 				Variadic: true,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
-					paths, err := asStringList(slices.Fst(args))
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+					paths, err := env.ToStringList(slices.Fst(args))
 					if err != nil {
 						return nil, err
 					}
@@ -866,11 +412,11 @@ func MakeInterp() Executer {
 					return i.Execute(strings.NewReader(slices.Snd(args).String()))
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "children",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
-					paths, err := asStringList(slices.Fst(args))
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+					paths, err := env.ToStringList(slices.Fst(args))
 					if err != nil {
 						return nil, err
 					}
@@ -879,7 +425,7 @@ func MakeInterp() Executer {
 						return nil, err
 					}
 					list := i.InterpretersList()
-					return ListFromStrings(list), nil
+					return env.ListFromStrings(list), nil
 				},
 			},
 		},
@@ -890,38 +436,38 @@ func MakeInterp() Executer {
 	return e
 }
 
-func MakeString() Executer {
-	e := Ensemble{
+func MakeString() stdlib.Executer {
+	e := stdlib.Ensemble{
 		Name: "string",
-		List: []Executer{
-			Builtin{
+		List: []stdlib.Executer{
+			stdlib.Builtin{
 				Name:  "tolower",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					return withString(slices.Fst(args), strings.ToLower)
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "toupper",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					return withString(slices.Fst(args), strings.ToUpper)
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "length",
 				Arity: 1,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 					return withString(slices.Fst(args), func(s string) string {
 						return strconv.Itoa(len(s))
 					})
 				},
 			},
-			Builtin{
+			stdlib.Builtin{
 				Name:  "repeat",
 				Arity: 2,
-				Run: func(i *Interpreter, args []Value) (Value, error) {
-					c, err := asInt(slices.Snd(args))
+				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+					c, err := env.ToInt(slices.Snd(args))
 					if err != nil {
 						return nil, err
 					}
@@ -938,23 +484,23 @@ func MakeString() Executer {
 	return e
 }
 
-func withString(v Value, do func(str string) string) (Value, error) {
+func withString(v env.Value, do func(str string) string) (env.Value, error) {
 	str, err := v.ToString()
 	if err != nil {
 		return nil, err
 	}
-	return Str(do(str.String())), nil
+	return env.Str(do(str.String())), nil
 }
 
-func (e Ensemble) IsSafe() bool {
+func (e stdlib.Ensemble) IsSafe() bool {
 	return e.Safe
 }
 
-func (e Ensemble) GetName() string {
+func (e stdlib.Ensemble) GetName() string {
 	return e.Name
 }
 
-func (e Ensemble) Execute(i *Interpreter, args []Value) (Value, error) {
+func (e stdlib.Ensemble) Execute(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 	name := slices.Fst(args).String()
 	x := sort.Search(len(e.List), func(i int) bool {
 		return getName(e.List[i]) >= name
@@ -965,11 +511,11 @@ func (e Ensemble) Execute(i *Interpreter, args []Value) (Value, error) {
 	return e.List[x].Execute(i, slices.Rest(args))
 }
 
-func getName(e Executer) string {
+func getName(e stdlib.Executer) string {
 	switch e := e.(type) {
-	case Builtin:
+	case stdlib.Builtin:
 		return e.Name
-	case Ensemble:
+	case stdlib.Ensemble:
 		return e.Name
 	case procedure:
 		return e.Name
@@ -978,165 +524,57 @@ func getName(e Executer) string {
 	}
 }
 
-type Builtin struct {
-	Name     string
-	Usage    string
-	Help     string
-	Safe     bool
-	Arity    int
-	Variadic bool
-	Run      CommandFunc
-	Options  []option
-}
-
-func (b Builtin) IsSafe() bool {
-	return b.Safe
-}
-
-func (b Builtin) GetName() string {
-	return b.Name
-}
-
-func (b Builtin) Execute(i *Interpreter, args []Value) (Value, error) {
-	if b.Run == nil {
-		return nil, fmt.Errorf("%s: command is not runnable", b.Name)
-	}
-	args, err := b.parseOptions(i, args)
-	if err != nil {
-		return nil, err
-	}
-	if err := b.parseArgs(args); err != nil {
-		return nil, err
-	}
-	return b.Run(i, args)
-}
-
-func (b Builtin) parseArgs(args []Value) error {
-	if n := len(args); n != b.Arity {
-		if !b.Variadic || (b.Variadic && n < b.Arity) {
-			return fmt.Errorf("%s: %w: want %d, got %d", b.Name, ErrArgument, b.Arity, n)
-		}
-	}
-	return nil
-}
-
-func (b Builtin) parseOptions(i *Interpreter, args []Value) ([]Value, error) {
-	if len(b.Options) == 0 {
-		return args, nil
-	}
-	sort.Slice(b.Options, func(i, j int) bool {
-		return b.Options[i].Name < b.Options[j].Name
-	})
-	for _, o := range b.Options {
-		if o.Value == nil {
-			continue
-		}
-		i.Define(o.Name, o.Value)
-	}
-	var j int
-	for ; j < len(args) && j < len(b.Options); j++ {
-		str := args[j].String()
-		if str == "--" || !strings.HasPrefix(str, "-") {
-			break
-		}
-		str = strings.TrimPrefix(str, "-")
-		x, err := isSet(b.Options, str)
-		if err != nil {
-			return nil, err
-		}
-		if b.Options[x].Flag {
-			i.Define(b.Options[x].Name, True())
-			continue
-		}
-		if check := b.Options[x].Check; check != nil {
-			if err := check(args[j+1]); err != nil {
-				return nil, err
-			}
-			b.Options[j].Value = args[j+1]
-			i.Define(str, b.Options[j].Value)
-		}
-		j++
-	}
-	if err := isValid(b.Options); err != nil {
-		return nil, err
-	}
-	return args[j:], nil
-}
-
-func isValid(list []option) error {
-	ok := slices.Every(list, func(o option) bool {
-		if !o.Required {
-			return true
-		}
-		return o.Required && o.Value != nil
-	})
-	if !ok {
-		return fmt.Errorf("required options are not provided!")
-	}
-	return nil
-}
-
-func isSet(list []option, name string) (int, error) {
-	x := sort.Search(len(list), func(i int) bool {
-		return list[i].Name >= name
-	})
-	if x < len(list) && list[x].Name == name {
-		return x, nil
-	}
-	return 0, fmt.Errorf("%s: option not supported", name)
-}
-
-func RunTypeOf() Executer {
-	return Builtin{
+func RunTypeOf() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "typeof",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			typ := fmt.Sprintf("%T", slices.Fst(args))
-			return Str(typ), nil
+			return env.Str(typ), nil
 		},
 	}
 }
 
-func RunDefer() Executer {
-	return Builtin{
+func RunDefer() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "defer",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			var (
 				name = fmt.Sprintf("defer%d", i.Count())
 				body = slices.Fst(args).String()
 			)
 			exec, _ := createProcedure(name, body, "")
 			i.registerDefer(exec)
-			return Str(""), nil
+			return env.EmptyStr(), nil
 		},
 	}
 }
 
-func RunHelp() Executer {
-	return Builtin{
+func RunHelp() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "help",
 		Help:  "retrieve help of given builtin command",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			help, err := i.GetHelp(slices.Fst(args).String())
 			if err != nil {
 				return nil, err
 			}
-			return Str(help), nil
+			return env.Str(help), nil
 		},
 	}
 }
 
-func RunProc() Executer {
-	return Builtin{
+func RunProc() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "proc",
 		Arity: 3,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			var (
 				name = slices.Fst(args).String()
 				list = slices.Snd(args).String()
@@ -1151,19 +589,19 @@ func RunProc() Executer {
 	}
 }
 
-func RunUplevel() Executer {
-	return Builtin{
+func RunUplevel() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:     "uplevel",
 		Arity:    1,
 		Variadic: true,
 		Safe:     false,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			var (
 				level int
 				abs   bool
 			)
 			if len(args) > 1 {
-				x, a, err := asLevel(slices.Fst(args))
+				x, a, err := env.ToLevel(slices.Fst(args))
 				if err != nil {
 					return nil, err
 				}
@@ -1179,18 +617,18 @@ func RunUplevel() Executer {
 	}
 }
 
-func RunUpvar() Executer {
-	return Builtin{
+func RunUpvar() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:     "upvar",
 		Arity:    2,
 		Variadic: true,
 		Safe:     false,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			var level int
 			if n := len(args) % 2; n == 0 {
 				level++
 			} else {
-				x, err := asInt(slices.Fst(args))
+				x, err := env.ToInt(slices.Fst(args))
 				if err != nil {
 					return nil, err
 				}
@@ -1206,83 +644,83 @@ func RunUpvar() Executer {
 					return nil, err
 				}
 			}
-			return EmptyStr(), nil
+			return env.EmptyStr(), nil
 		},
 	}
 }
 
-func RunSet() Executer {
-	return Builtin{
+func RunSet() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "set",
 		Arity: 2,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			i.Define(slices.Fst(args).String(), slices.Snd(args))
 			return slices.Snd(args), nil
 		},
 	}
 }
 
-func RunUnset() Executer {
-	return Builtin{
+func RunUnset() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "unset",
 		Arity: 1,
 		Safe:  true,
-		Options: []option{
+		Options: []argparse.Option{
 			{
 				Name:  "nocomplain",
 				Flag:  true,
-				Value: False(),
-				Check: checkBool,
+				Value: env.False(),
+				Check: argparse.CheckBool,
 			},
 		},
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			i.Delete(slices.Fst(args).String())
 			return nil, nil
 		},
 	}
 }
 
-func RunIncr() Executer {
-	return Builtin{
+func RunIncr() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "incr",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			v, err := i.Resolve(slices.Fst(args).String())
 			if err != nil {
 				return nil, err
 			}
-			n, err := asInt(v)
+			n, err := env.ToInt(v)
 			if err != nil {
 				return nil, err
 			}
-			res := Int(int64(n) + 1)
+			res := env.Int(int64(n) + 1)
 			i.Define(slices.Fst(args).String(), res)
 			return res, nil
 		},
 	}
 }
 
-func RunEval() Executer {
-	return Builtin{
+func RunEval() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:     "eval",
 		Help:     "eval given script",
 		Variadic: true,
 		Safe:     false,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
-			tmp := ListFrom(args...)
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+			tmp := env.ListFrom(args...)
 			return i.Execute(strings.NewReader(tmp.String()))
 		},
 	}
 }
 
-func RunPrintArray() Executer {
-	return Builtin{
+func RunPrintArray() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "parray",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			arr, err := i.Resolve(slices.Fst(args).String())
 			if err != nil {
 				return nil, err
@@ -1291,7 +729,7 @@ func RunPrintArray() Executer {
 			if err != nil {
 				return nil, err
 			}
-			vs := arr.(Array)
+			vs := arr.(env.Array)
 			for k, v := range vs.values {
 				fmt.Fprintf(i.Out, "%s(%s) = %s", slices.Fst(args), k, v)
 				fmt.Fprintln(i.Out)
@@ -1301,27 +739,27 @@ func RunPrintArray() Executer {
 	}
 }
 
-func RunPuts() Executer {
-	return Builtin{
+func RunPuts() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "puts",
 		Help:  "print a message to given channel (default to stdout)",
 		Arity: 1,
 		Safe:  true,
-		Options: []option{
+		Options: []argparse.Option{
 			{
 				Name:  "nonewline",
 				Flag:  true,
-				Value: False(),
-				Check: checkBool,
+				Value: env.False(),
+				Check: argparse.CheckBool,
 			},
 			{
 				Name:     "channel",
-				Value:    Str("stdout"),
+				Value:    env.Str("stdout"),
 				Required: true,
-				Check:    combineCheck(checkString, checkChannel),
+				Check:    argparse.CombineCheck(argparse.CheckString, checkChannel),
 			},
 		},
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			str, err := i.Resolve("channel")
 			if err != nil {
 				return nil, err
@@ -1336,47 +774,47 @@ func RunPuts() Executer {
 				return nil, nil
 			}
 			fmt.Fprintln(ch, slices.Fst(args))
-			return Str(""), nil
+			return env.EmptyStr(), nil
 		},
 	}
 }
 
-func RunList() Executer {
-	return Builtin{
+func RunList() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "list",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			return slices.Fst(args).ToList()
 		},
 	}
 }
 
-func RunListLen() Executer {
-	return Builtin{
+func RunListLen() stdlib.Executer {
+	return stdlib.Builtin{
 		Name:  "llength",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i *Interpreter, args []Value) (Value, error) {
+		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 			list, err := slices.Fst(args).ToList()
 			if err != nil {
 				return nil, err
 			}
 			n, ok := list.(interface{ Len() int })
 			if !ok {
-				return Int(0), nil
+				return env.Int(0), nil
 			}
-			return Int(int64(n.Len())), nil
+			return env.Int(int64(n.Len())), nil
 		},
 	}
 }
 
 type argument struct {
 	Name    string
-	Default Value
+	Default env.Value
 }
 
-func createArg(n string, v Value) argument {
+func createArg(n string, v env.Value) argument {
 	return argument{
 		Name:    n,
 		Default: v,
@@ -1434,7 +872,7 @@ func parseArguments(str string) ([]argument, error) {
 			if err != nil {
 				return nil, err
 			}
-			a = createArg(ws[0], Str(ws[1]))
+			a = createArg(ws[0], env.Str(ws[1]))
 		default:
 			return nil, ErrSyntax
 		}
@@ -1454,7 +892,7 @@ type procedure struct {
 	Variadic bool
 }
 
-func createProcedure(name, body, args string) (Executer, error) {
+func createProcedure(name, body, args string) (stdlib.Executer, error) {
 	p := procedure{
 		Name: name,
 		Body: strings.TrimSpace(body),
@@ -1477,7 +915,7 @@ func (_ procedure) IsSafe() bool {
 	return true
 }
 
-func (p procedure) Execute(i *Interpreter, args []Value) (Value, error) {
+func (p procedure) Execute(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 	for j, a := range p.Args {
 		if j < len(args) {
 			a.Default = args[j]
@@ -1487,7 +925,7 @@ func (p procedure) Execute(i *Interpreter, args []Value) (Value, error) {
 	return i.Execute(strings.NewReader(p.Body))
 }
 
-type CommandSet map[string]Executer
+type CommandSet map[string]stdlib.Executer
 
 func EmptySet() CommandSet {
 	return make(CommandSet)
@@ -1521,7 +959,7 @@ func UtilSet() CommandSet {
 	return set
 }
 
-func (cs CommandSet) registerCmd(name string, exec Executer) {
+func (cs CommandSet) registerCmd(name string, exec stdlib.Executer) {
 	cs[name] = exec
 }
 
@@ -1530,9 +968,9 @@ type Namespace struct {
 	parent   *Namespace
 	children []*Namespace
 
-	env *Env
+	env *env.Env
 	CommandSet
-	unknown CommandFunc
+	unknown stdlib.CommandFunc
 }
 
 func EmptyNS(name string) *Namespace {
@@ -1542,7 +980,7 @@ func EmptyNS(name string) *Namespace {
 func GlobalNS() *Namespace {
 	ns := createNS("", DefaultSet())
 	ns.RegisterNS(UtilNS())
-	ns.unknown = func(i *Interpreter, args []Value) (Value, error) {
+	ns.unknown = func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 		var (
 			name   = slices.Fst(args).String()
 			values []string
@@ -1551,14 +989,14 @@ func GlobalNS() *Namespace {
 			values = append(values, a.String())
 		}
 		res, err := exec.Command(name, values...).Output()
-		return Str(string(res)), err
+		return env.Str(string(res)), err
 	}
 	return ns
 }
 
 func UtilNS() *Namespace {
 	ns := createNS("util", UtilSet())
-	ns.env.Define("version", Str("1.12.189"))
+	ns.env.Define("version", env.Str("1.12.189"))
 	return ns
 }
 
@@ -1570,7 +1008,7 @@ func createNS(name string, set CommandSet) *Namespace {
 	return &Namespace{
 		Name:       name,
 		CommandSet: set,
-		env:        EmptyEnv(),
+		env:        env.EmptyEnv(),
 	}
 }
 
@@ -1578,7 +1016,7 @@ func (n *Namespace) GetName() string {
 	return n.Name
 }
 
-func (n *Namespace) Resolve(v string) (Value, error) {
+func (n *Namespace) Resolve(v string) (env.Value, error) {
 	return n.env.Resolve(v)
 }
 
@@ -1613,7 +1051,7 @@ func (n *Namespace) LookupNS(name []string) (*Namespace, error) {
 	return nil, err
 }
 
-func (n *Namespace) RegisterExec(name []string, exec Executer) error {
+func (n *Namespace) RegisterExec(name []string, exec stdlib.Executer) error {
 	name, err := n.validNS(name)
 	if err != nil {
 		return err
@@ -1629,7 +1067,7 @@ func (n *Namespace) RegisterExec(name []string, exec Executer) error {
 	return err
 }
 
-func (n *Namespace) LookupExec(name []string) (Executer, error) {
+func (n *Namespace) LookupExec(name []string) (stdlib.Executer, error) {
 	name, err := n.validNS(name)
 	if err != nil {
 		return nil, err
@@ -1689,12 +1127,12 @@ func (n *Namespace) validNS(name []string) ([]string, error) {
 }
 
 type Frame struct {
-	env      *Env
+	env      *env.Env
 	ns       *Namespace
-	deferred []Executer
+	deferred []stdlib.Executer
 }
 
-func (f *Frame) Define(n string, v Value) {
+func (f *Frame) Define(n string, v env.Value) {
 	f.env.Define(n, v)
 }
 
@@ -1702,7 +1140,7 @@ func (f *Frame) Delete(n string) {
 	f.env.Delete(n)
 }
 
-func (f *Frame) Resolve(n string) (Value, error) {
+func (f *Frame) Resolve(n string) (env.Value, error) {
 	v, err := f.env.Resolve(n)
 	if err == nil {
 		return v, err
@@ -1711,7 +1149,7 @@ func (f *Frame) Resolve(n string) (Value, error) {
 }
 
 type Interpreter struct {
-	last   Value
+	last   env.Value
 	count  int
 	safe   bool
 	frames []*Frame
@@ -1765,7 +1203,7 @@ func (i *Interpreter) LinkVar(src, dst string, level int) error {
 		return fmt.Errorf("can not link variables in level %d", level)
 	}
 	depth -= level
-	i.currentFrame().Define(dst, createLink(src, depth))
+	i.currentFrame().Define(dst, env.NewLink(src, depth))
 	return nil
 }
 
@@ -1852,9 +1290,9 @@ func (i *Interpreter) GetHelp(name string) (string, error) {
 	}
 	var help string
 	switch e := exec.(type) {
-	case Builtin:
+	case stdlib.Builtin:
 		help = e.Help
-	case Ensemble:
+	case stdlib.Ensemble:
 		help = e.Help
 	default:
 		return "", fmt.Errorf("%s: can not retrieve help", name)
@@ -1862,16 +1300,16 @@ func (i *Interpreter) GetHelp(name string) (string, error) {
 	return help, nil
 }
 
-func (i *Interpreter) RegisterProc(name string, exec Executer) {
+func (i *Interpreter) RegisterProc(name string, exec stdlib.Executer) {
 	i.currentNS().RegisterExec([]string{name}, exec)
 }
 
-func (i *Interpreter) Define(n string, v Value) {
+func (i *Interpreter) Define(n string, v env.Value) {
 	tmp, err := i.currentFrame().Resolve(n)
 	if err == nil {
-		k, ok := tmp.(Link)
+		k, ok := tmp.(env.Link)
 		if ok {
-			i.frames[k.level].env.Define(k.Value.String(), v)
+			i.frames[k.At()].env.Define(k.String(), v)
 			return
 		}
 	}
@@ -1881,23 +1319,23 @@ func (i *Interpreter) Define(n string, v Value) {
 func (i *Interpreter) Delete(n string) {
 	v, err := i.currentFrame().Resolve(n)
 	if err == nil {
-		k, ok := v.(Link)
+		k, ok := v.(env.Link)
 		if ok {
-			i.frames[k.level].env.Delete(k.Value.String())
+			i.frames[k.At()].env.Delete(k.String())
 		}
 	}
 	i.currentFrame().Delete(n)
 }
 
-func (i *Interpreter) Resolve(n string) (Value, error) {
+func (i *Interpreter) Resolve(n string) (env.Value, error) {
 	name := strings.Split(n, "::")
 	if len(name) == 1 {
 		v, err := i.currentFrame().Resolve(n)
 		if err != nil {
 			return nil, err
 		}
-		if k, ok := v.(Link); ok {
-			v, err = i.frames[k.level].env.Resolve(k.Value.String())
+		if k, ok := v.(env.Link); ok {
+			v, err = i.frames[k.At()].env.Resolve(k.String())
 		}
 		return v, err
 	}
@@ -1919,8 +1357,8 @@ func (i *Interpreter) Resolve(n string) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	if k, ok := v.(Link); ok {
-		v, err = i.frames[k.level].env.Resolve(k.Value.String())
+	if k, ok := v.(env.Link); ok {
+		v, err = i.frames[k.At()].env.Resolve(k.String())
 	}
 	return v, err
 }
@@ -1933,7 +1371,7 @@ func (i *Interpreter) Count() int {
 	return i.count
 }
 
-func (i *Interpreter) Level(r io.Reader, level int) (Value, error) {
+func (i *Interpreter) Level(r io.Reader, level int) (env.Value, error) {
 	old := append([]*Frame{}, i.frames...)
 	defer func() {
 		i.frames = old
@@ -1942,7 +1380,7 @@ func (i *Interpreter) Level(r io.Reader, level int) (Value, error) {
 	return i.Execute(r)
 }
 
-func (i *Interpreter) Execute(r io.Reader) (Value, error) {
+func (i *Interpreter) Execute(r io.Reader) (env.Value, error) {
 	if i.currentNS().Root() && i.count == 0 {
 		defer i.executeDefer()
 	}
@@ -1969,7 +1407,7 @@ func (i *Interpreter) Execute(r io.Reader) (Value, error) {
 	return i.last, nil
 }
 
-func (i *Interpreter) execute(c *Command) (Value, error) {
+func (i *Interpreter) execute(c *Command) (env.Value, error) {
 	var (
 		parts = strings.Split(c.Name.String(), "::")
 		ns    *Namespace
@@ -2003,7 +1441,7 @@ func (i *Interpreter) execute(c *Command) (Value, error) {
 	return exec.Execute(i, c.Args)
 }
 
-func (i *Interpreter) isSafe(exec Executer) bool {
+func (i *Interpreter) isSafe(exec stdlib.Executer) bool {
 	if i.Root() {
 		return true
 	}
@@ -2012,7 +1450,7 @@ func (i *Interpreter) isSafe(exec Executer) bool {
 
 func (i *Interpreter) push(ns *Namespace) {
 	f := &Frame{
-		env: EmptyEnv(),
+		env: env.EmptyEnv(),
 		ns:  ns,
 	}
 	i.frames = append(i.frames, f)
@@ -2044,7 +1482,7 @@ func (i *Interpreter) currentFrame() *Frame {
 	return slices.Lst(i.frames)
 }
 
-func (i *Interpreter) registerDefer(exec Executer) {
+func (i *Interpreter) registerDefer(exec stdlib.Executer) {
 	curr := i.currentFrame()
 	curr.deferred = append(curr.deferred, exec)
 }
