@@ -49,3 +49,11 @@ namespace eval engine {
 
 engine::up
 engine::down
+
+array set arr {
+  fst 1
+  snd 2
+  lst 3
+}
+parray arr
+puts [array get arr]

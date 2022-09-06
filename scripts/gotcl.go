@@ -130,6 +130,14 @@ func EmptyArr() Value {
 	}
 }
 
+func (a Array) Get(n string) Value {
+	return a.values[n]
+}
+
+func (a Array) Set(n string, v Value) {
+	a.values[n] = v
+}
+
 func (a Array) String() string {
 	var str strings.Builder
 	for k, v := range a.values {
@@ -423,6 +431,7 @@ func New(r io.Reader) (*Parser, error) {
 }
 
 func (p *Parser) Parse(i *Interpreter) (*Command, error) {
+	p.skipEmptyLines()
 	if p.done() {
 		return nil, io.EOF
 	}
@@ -481,7 +490,13 @@ func (p *Parser) skipEnd() {
 }
 
 func (p *Parser) skipBlank() {
-	for p.isBlank() {
+	for p.isBlank() && !p.done() {
+		p.next()
+	}
+}
+
+func (p *Parser) skipEmptyLines() {
+	for p.curr.IsEOL() && !p.done() {
 		p.next()
 	}
 }
@@ -577,6 +592,27 @@ func substitute(curr word.Word, i *Interpreter) (Value, error) {
 	return val, err
 }
 
+func scan(str string) ([]string, error) {
+	s, err := word.Scan(strings.NewReader(str))
+	if err != nil {
+		return nil, err
+	}
+	var list []string
+	for {
+		w := s.Scan()
+		if w.Type == word.Illegal {
+			return nil, fmt.Errorf("illegal token")
+		}
+		if w.Type == word.EOF {
+			break
+		}
+		if w.Literal != "" {
+			list = append(list, w.Literal)
+		}
+	}
+	return list, nil
+}
+
 type CommandFunc func(*Interpreter, []Value) (Value, error)
 
 type Executer interface {
@@ -665,6 +701,77 @@ func MakeNamespace() Executer {
 				Run: func(i *Interpreter, args []Value) (Value, error) {
 					err := i.UnregisterNS(slices.Fst(args).String())
 					return EmptyStr(), err
+				},
+			},
+		},
+	}
+	sort.Slice(e.List, func(i, j int) bool {
+		return getName(e.List[i]) < getName(e.List[j])
+	})
+	return e
+}
+
+func MakeArray() Executer {
+	e := Ensemble{
+		Name: "array",
+		List: []Executer{
+			Builtin{
+				Name:  "set",
+				Arity: 2,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					arr, err := i.Resolve(slices.Fst(args).String())
+					if err != nil {
+						arr = EmptyArr()
+					}
+					list, err := scan(slices.Snd(args).String())
+					if err != nil {
+						return nil, err
+					}
+					if len(list)%2 != 0 {
+						return nil, fmt.Errorf("invalid length")
+					}
+					s := arr.(Array)
+					for i := 0; i < len(list); i += 2 {
+						s.Set(list[i], Str(list[i+1]))
+					}
+					i.Define(slices.Fst(args).String(), s)
+					return nil, nil
+				},
+			},
+			Builtin{
+				Name:  "get",
+				Arity: 1,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					arr, err := i.Resolve(slices.Fst(args).String())
+					if err != nil {
+						return nil, err
+					}
+					arr, err = arr.ToArray()
+					if err != nil {
+						return nil, err
+					}
+					var (
+						g  = arr.(Array)
+						vs []Value
+					)
+					for k, v := range g.values {
+						vs = append(vs, ListFrom(Str(k), v))
+					}
+					return ListFrom(vs...), nil
+				},
+			},
+			Builtin{
+				Name:  "names",
+				Arity: 1,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return nil, nil
+				},
+			},
+			Builtin{
+				Name:  "size",
+				Arity: 1,
+				Run: func(i *Interpreter, args []Value) (Value, error) {
+					return nil, nil
 				},
 			},
 		},
@@ -876,6 +983,9 @@ func (b Builtin) GetName() string {
 }
 
 func (b Builtin) Execute(i *Interpreter, args []Value) (Value, error) {
+	if b.Run == nil {
+		return nil, fmt.Errorf("%s: command is not runnable", b.Name)
+	}
 	args, err := b.parseOptions(i, args)
 	if err != nil {
 		return nil, err
@@ -1152,6 +1262,30 @@ func RunEval() Executer {
 	}
 }
 
+func RunPrintArray() Executer {
+	return Builtin{
+		Name:  "parray",
+		Arity: 1,
+		Safe:  true,
+		Run: func(i *Interpreter, args []Value) (Value, error) {
+			arr, err := i.Resolve(slices.Fst(args).String())
+			if err != nil {
+				return nil, err
+			}
+			arr, err = arr.ToArray()
+			if err != nil {
+				return nil, err
+			}
+			vs := arr.(Array)
+			for k, v := range vs.values {
+				fmt.Fprintf(i.Out, "%s(%s) = %s", slices.Fst(args), k, v)
+				fmt.Fprintln(i.Out)
+			}
+			return nil, nil
+		},
+	}
+}
+
 func RunPuts() Executer {
 	return Builtin{
 		Name:  "puts",
@@ -1359,6 +1493,8 @@ func DefaultSet() CommandSet {
 	set.registerCmd("uplevel", RunUplevel())
 	set.registerCmd("incr", RunIncr())
 	set.registerCmd("namespace", MakeNamespace())
+	set.registerCmd("parray", RunPrintArray())
+	set.registerCmd("array", MakeArray())
 	return set
 }
 
@@ -1596,7 +1732,7 @@ func (i *Interpreter) RegisterNS(name, body string) error {
 	i.push(ns)
 	defer i.pop()
 
-	body = strings.TrimSpace(body)
+	// body = strings.TrimSpace(body)
 	_, err := i.Execute(strings.NewReader(body))
 	return err
 }
