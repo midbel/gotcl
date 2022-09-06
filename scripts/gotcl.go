@@ -764,7 +764,22 @@ func MakeArray() Executer {
 				Name:  "names",
 				Arity: 1,
 				Run: func(i *Interpreter, args []Value) (Value, error) {
-					return nil, nil
+					arr, err := i.Resolve(slices.Fst(args).String())
+					if err != nil {
+						return nil, err
+					}
+					arr, err = arr.ToArray()
+					if err != nil {
+						return nil, err
+					}
+					var (
+						g  = arr.(Array)
+						vs []string
+					)
+					for k := range g.values {
+						vs = append(vs, k)
+					}
+					return ListFromStrings(vs), nil
 				},
 			},
 			Builtin{

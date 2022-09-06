@@ -57,3 +57,4 @@ array set arr {
 }
 parray arr
 puts [array get arr]
+puts [array names arr]
