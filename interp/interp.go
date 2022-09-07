@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/midbel/gotcl/env"
+	"github.com/midbel/gotcl/glob"
 	"github.com/midbel/gotcl/stdlib"
 	"github.com/midbel/slices"
 )
@@ -256,6 +257,31 @@ func (i *Interpreter) Print(ch, msg string, nl bool) error {
 		fmt.Fprintln(w)
 	}
 	return nil
+}
+
+func (i *Interpreter) Commands(pat string) []string {
+	var list []string
+	for k := range i.currentNS().CommandSet {
+		list = append(list, k)
+	}
+	return glob.Filter(list, pat)
+}
+
+func (i *Interpreter) ProcList(pat string) []string {
+	list := i.currentNS().Procedures()
+	return glob.Filter(list, pat)
+}
+
+func (i *Interpreter) ProcArgs(proc string) ([]string, error) {
+	return i.currentNS().Args(proc)
+}
+
+func (i *Interpreter) ProcBody(proc string) (string, error) {
+	return i.currentNS().Body(proc)
+}
+
+func (i *Interpreter) ProcDefault(proc, arg string) (string, bool, error) {
+	return "", false, nil
 }
 
 func (i *Interpreter) Depth() int {

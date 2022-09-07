@@ -35,7 +35,9 @@ func RunProc() Executer {
 		Arity: 3,
 		Safe:  true,
 		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			h, ok := i.(ProcHandler)
+			h, ok := i.(interface {
+				RegisterProc(string, string, string) error
+			})
 			if !ok {
 				return nil, fmt.Errorf("interpreter can not register defer call")
 			}

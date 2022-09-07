@@ -58,3 +58,12 @@ array set arr {
 parray arr
 puts [array get arr]
 puts [array names arr]
+
+puts [info depth]
+puts [info count]
+puts [info commands]
+puts [info hostname]
+puts [info nameofexecutable]
+puts [info procs]
+puts [info args greet]
+puts [info body greet]

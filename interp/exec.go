@@ -52,6 +52,45 @@ func (cs CommandSet) registerCmd(name string, exec stdlib.Executer) {
 	cs[name] = exec
 }
 
+func (cs CommandSet) Procedures() []string {
+	var list []string
+	for k, e := range cs {
+		if _, ok := e.(procedure); !ok {
+			continue
+		}
+		list = append(list, k)
+	}
+	return list
+}
+
+func (cs CommandSet) Args(proc string) ([]string, error) {
+	e, ok := cs[proc]
+	if !ok {
+		return nil, fmt.Errorf("%s: undefined", proc)
+	}
+	p, ok := e.(procedure)
+	if !ok {
+		return nil, fmt.Errorf("%s is not a procedure", proc)
+	}
+	var list []string
+	for _, a := range p.Args {
+		list = append(list, a.Name)
+	}
+	return list, nil
+}
+
+func (cs CommandSet) Body(proc string) (string, error) {
+	e, ok := cs[proc]
+	if !ok {
+		return "", fmt.Errorf("%s: undefined", proc)
+	}
+	p, ok := e.(procedure)
+	if !ok {
+		return "", fmt.Errorf("%s is not a procedure", proc)
+	}
+	return p.Body, nil
+}
+
 type procedure struct {
 	Name     string
 	Body     string
