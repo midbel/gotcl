@@ -99,12 +99,18 @@ func RunUpvar() Executer {
 				level = x
 				args = slices.Rest(args)
 			}
+			k, ok := i.(interface {
+				LinkVar(string, string, int) error
+			})
+			if !ok {
+				return nil, fmt.Errorf("interpreter can not create link between variables")
+			}
 			for j := 0; j < len(args); j += 2 {
 				var (
 					src = slices.At(args, j)
 					dst = slices.At(args, j+1)
 				)
-				if err := i.LinkVar(src.String(), dst.String(), level); err != nil {
+				if err := k.LinkVar(src.String(), dst.String(), level); err != nil {
 					return nil, err
 				}
 			}

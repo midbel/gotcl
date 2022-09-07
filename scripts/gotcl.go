@@ -279,6 +279,10 @@ func createProcedure(name, body, args string) (stdlib.Executer, error) {
 	return p, nil
 }
 
+func (p procedure) GetName() string {
+	return p.Name
+}
+
 func (_ procedure) IsSafe() bool {
 	return true
 }

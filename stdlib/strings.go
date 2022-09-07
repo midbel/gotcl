@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/midbel/gotcl/env"
+	"github.com/midbel/slices"
 )
 
 func MakeString() Executer {
@@ -51,7 +52,7 @@ func MakeString() Executer {
 		},
 	}
 	sort.Slice(e.List, func(i, j int) bool {
-		return getName(e.List[i]) < getName(e.List[j])
+		return e.List[i].GetName() < e.List[j].GetName()
 	})
 	return e
 }

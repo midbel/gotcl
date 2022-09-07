@@ -27,9 +27,9 @@ func RunHelp() Executer {
 		Arity: 1,
 		Safe:  true,
 		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			h, ok := i.(interface{ GetHelp() (string, error) })
+			h, ok := i.(interface{ GetHelp(string) (string, error) })
 			if !ok {
-				return fmt.Errorf("interpreter can not extract help from command")
+				return nil, fmt.Errorf("interpreter can not extract help from command")
 			}
 			help, err := h.GetHelp(slices.Fst(args).String())
 			if err != nil {
