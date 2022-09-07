@@ -1,10 +1,10 @@
 package stdlib
 
 import (
-  "fmt"
+	"fmt"
 
-  "github.com/midbel/gotcl/env"
-  "github.com/midbel/slices"
+	"github.com/midbel/gotcl/env"
+	"github.com/midbel/slices"
 )
 
 func RunTypeOf() Executer {
@@ -19,35 +19,18 @@ func RunTypeOf() Executer {
 	}
 }
 
-func RunDefer() Executer {
-	return Builtin{
-		Name:  "defer",
-		Arity: 1,
-		Safe:  true,
-		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			var (
-				name = fmt.Sprintf("defer%d", i.Count())
-				body = slices.Fst(args).String()
-			)
-			exec, _ := createProcedure(name, body, "")
-			i.registerDefer(exec)
-			return env.EmptyStr(), nil
-		},
-	}
-}
-
 func RunHelp() Executer {
 	return Builtin{
-		Name:  "help",
-		Help:  "retrieve help of given builtin command",
+		Name: "help",
+		Help: "retrieve help of given builtin command",
 
 		Arity: 1,
 		Safe:  true,
 		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-      h, ok := i.(interface{ GetHelp() (string, error) })
-      if !ok {
-        return fmt.Errorf("interpreter can not extract help from command")
-      }
+			h, ok := i.(interface{ GetHelp() (string, error) })
+			if !ok {
+				return fmt.Errorf("interpreter can not extract help from command")
+			}
 			help, err := h.GetHelp(slices.Fst(args).String())
 			if err != nil {
 				return nil, err

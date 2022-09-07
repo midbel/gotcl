@@ -177,26 +177,6 @@ func substitute(curr word.Word, i *Interpreter) (env.Value, error) {
 	return val, err
 }
 
-func RunProc() stdlib.Executer {
-	return stdlib.Builtin{
-		Name:  "proc",
-		Arity: 3,
-		Safe:  true,
-		Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
-			var (
-				name = slices.Fst(args).String()
-				list = slices.Snd(args).String()
-				body = slices.Lst(args).String()
-			)
-			exec, err := createProcedure(name, body, list)
-			if err == nil {
-				i.RegisterProc(name, exec)
-			}
-			return nil, err
-		},
-	}
-}
-
 type argument struct {
 	Name    string
 	Default env.Value
@@ -688,8 +668,21 @@ func (i *Interpreter) GetHelp(name string) (string, error) {
 	return help, nil
 }
 
-func (i *Interpreter) RegisterProc(name string, exec stdlib.Executer) {
-	i.currentNS().RegisterExec([]string{name}, exec)
+func (i *Interpreter) RegisterDefer(body string) error {
+	name := fmt.Sprintf("defer%d", i.Count())
+	exec, err := createProcedure(name, body, "")
+	if err == nil {
+		i.registerDefer(exec)
+	}
+	return err
+}
+
+func (i *Interpreter) RegisterProc(name, body, args string) error {
+	exec, err := createProcedure(name, body, args)
+	if err == nil {
+		i.currentNS().RegisterExec([]string{name}, exec)
+	}
+	return err
 }
 
 func (i *Interpreter) Define(n string, v env.Value) {

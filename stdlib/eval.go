@@ -1,11 +1,57 @@
 package stdlib
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/slices"
 )
+
+type ProcHandler interface {
+	Interpreter
+	RegisterProc(string, string, string) error
+}
+
+type DeferHandler interface {
+	Interpreter
+	RegisterDefer(string) error
+}
+
+func RunDefer() Executer {
+	return Builtin{
+		Name:  "defer",
+		Arity: 1,
+		Safe:  true,
+		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
+			h, ok := i.(DeferHandler)
+			if !ok {
+				return nil, fmt.Errorf("interpreter can not register defer call")
+			}
+			return env.EmptyStr(), h.RegisterDefer(slices.Fst(args).String())
+		},
+	}
+}
+
+func RunProc() Executer {
+	return Builtin{
+		Name:  "proc",
+		Arity: 3,
+		Safe:  true,
+		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
+			h, ok := i.(ProcHandler)
+			if !ok {
+				return nil, fmt.Errorf("interpreter can not register defer call")
+			}
+			var (
+				name = slices.Fst(args).String()
+				list = slices.Snd(args).String()
+				body = slices.Lst(args).String()
+			)
+			return nil, h.RegisterProc(name, body, list)
+		},
+	}
+}
 
 func RunUplevel() Executer {
 	return Builtin{
