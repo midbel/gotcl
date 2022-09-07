@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/midbel/gotcl/env"
-	"github.com/midbel/gotcl/stdlib/argparse"
 	"github.com/midbel/slices"
 )
 
@@ -28,12 +27,12 @@ func MakeInterp() Executer {
 			Builtin{
 				Name:  "create",
 				Arity: 1,
-				Options: []argparse.Option{
+				Options: []Option{
 					{
 						Name:  "safe",
 						Flag:  true,
 						Value: env.False(),
-						Check: argparse.CheckBool,
+						Check: CheckBool,
 					},
 				},
 				Run: wrapInterpFunc(interpCreate),

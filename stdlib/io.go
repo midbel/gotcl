@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/midbel/gotcl/env"
-	"github.com/midbel/gotcl/stdlib/argparse"
 	"github.com/midbel/slices"
 )
 
@@ -15,18 +14,18 @@ func RunPuts() Executer {
 		Help:  "print a message to given channel (default to stdout)",
 		Arity: 1,
 		Safe:  true,
-		Options: []argparse.Option{
+		Options: []Option{
 			{
 				Name:  "nonewline",
 				Flag:  true,
 				Value: env.False(),
-				Check: argparse.CheckBool,
+				Check: CheckBool,
 			},
 			{
 				Name:     "channel",
 				Value:    env.Str("stdout"),
 				Required: true,
-				Check:    argparse.CheckString,
+				Check:    CheckString,
 			},
 		},
 		Run: func(i Interpreter, args []env.Value) (env.Value, error) {

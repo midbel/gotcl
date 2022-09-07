@@ -13,7 +13,6 @@ import (
 
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/gotcl/stdlib"
-	"github.com/midbel/gotcl/stdlib/argparse"
 	"github.com/midbel/gotcl/word"
 	"github.com/midbel/slices"
 )

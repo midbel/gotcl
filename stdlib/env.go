@@ -2,7 +2,6 @@ package stdlib
 
 import (
 	"github.com/midbel/gotcl/env"
-	"github.com/midbel/gotcl/stdlib/argparse"
 	"github.com/midbel/slices"
 )
 
@@ -23,12 +22,12 @@ func RunUnset() Executer {
 		Name:  "unset",
 		Arity: 1,
 		Safe:  true,
-		Options: []argparse.Option{
+		Options: []Option{
 			{
 				Name:  "nocomplain",
 				Flag:  true,
 				Value: env.False(),
-				Check: argparse.CheckBool,
+				Check: CheckBool,
 			},
 		},
 		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
