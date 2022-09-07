@@ -36,27 +36,27 @@ func MakeInterp() Executer {
 						Check: argparse.CheckBool,
 					},
 				},
-				Run: wrapInterpFunc(createInterp),
+				Run: wrapInterpFunc(interpCreate),
 			},
 			Builtin{
 				Name:  "delete",
 				Arity: 1,
-				Run:   wrapInterpFunc(deleteInterp),
+				Run:   wrapInterpFunc(interpDelete),
 			},
 			Builtin{
 				Name:  "issafe",
 				Arity: 1,
-				Run:   wrapInterpFunc(isSafeInterp),
+				Run:   wrapInterpFunc(interpIssafe),
 			},
 			Builtin{
 				Name:     "eval",
 				Variadic: true,
-				Run:      wrapInterpFunc(evalInterp),
+				Run:      wrapInterpFunc(interpEval),
 			},
 			Builtin{
 				Name:  "children",
 				Arity: 1,
-				Run:   wrapInterpFunc(childrenInterp),
+				Run:   wrapInterpFunc(interpChildren),
 			},
 		},
 	}
@@ -66,7 +66,7 @@ func MakeInterp() Executer {
 	return e
 }
 
-func createInterp(i InterpHandler, args []env.Value) (env.Value, error) {
+func interpCreate(i InterpHandler, args []env.Value) (env.Value, error) {
 	paths, err := env.ToStringList(slices.Fst(args))
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func createInterp(i InterpHandler, args []env.Value) (env.Value, error) {
 	return env.Str(val), err
 }
 
-func deleteInterp(i InterpHandler, args []env.Value) (env.Value, error) {
+func interpDelete(i InterpHandler, args []env.Value) (env.Value, error) {
 	paths, err := env.ToStringList(slices.Fst(args))
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func deleteInterp(i InterpHandler, args []env.Value) (env.Value, error) {
 	return nil, i.UnregisterInterpreter(paths)
 }
 
-func isSafeInterp(i InterpHandler, args []env.Value) (env.Value, error) {
+func interpIssafe(i InterpHandler, args []env.Value) (env.Value, error) {
 	paths, err := env.ToStringList(slices.Fst(args))
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func isSafeInterp(i InterpHandler, args []env.Value) (env.Value, error) {
 	return env.Bool(i.IsSafe()), nil
 }
 
-func evalInterp(i InterpHandler, args []env.Value) (env.Value, error) {
+func interpEval(i InterpHandler, args []env.Value) (env.Value, error) {
 	paths, err := env.ToStringList(slices.Fst(args))
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func evalInterp(i InterpHandler, args []env.Value) (env.Value, error) {
 	return i.Execute(strings.NewReader(slices.Snd(args).String()))
 }
 
-func childrenInterp(i InterpHandler, args []env.Value) (env.Value, error) {
+func interpChildren(i InterpHandler, args []env.Value) (env.Value, error) {
 	paths, err := env.ToStringList(slices.Fst(args))
 	if err != nil {
 		return nil, err

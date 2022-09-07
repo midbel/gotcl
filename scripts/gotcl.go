@@ -227,36 +227,6 @@ func checkChannel(v env.Value) error {
 	return nil
 }
 
-func MakeNamespace() stdlib.Executer {
-	e := stdlib.Ensemble{
-		Name: "namespace",
-		List: []stdlib.Executer{
-			stdlib.Builtin{
-				Name:  "eval",
-				Arity: 2,
-				Safe:  true,
-				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
-					err := i.RegisterNS(slices.Fst(args).String(), slices.Snd(args).String())
-					return env.EmptyStr(), err
-				},
-			},
-			stdlib.Builtin{
-				Name:  "delete",
-				Arity: 1,
-				Safe:  true,
-				Run: func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
-					err := i.UnregisterNS(slices.Fst(args).String())
-					return env.EmptyStr(), err
-				},
-			},
-		},
-	}
-	sort.Slice(e.List, func(i, j int) bool {
-		return getName(e.List[i]) < getName(e.List[j])
-	})
-	return e
-}
-
 func MakeArray() stdlib.Executer {
 	e := stdlib.Ensemble{
 		Name: "array",
@@ -397,25 +367,6 @@ func withString(v env.Value, do func(str string) string) (env.Value, error) {
 		return nil, err
 	}
 	return env.Str(do(str.String())), nil
-}
-
-func (e stdlib.Ensemble) IsSafe() bool {
-	return e.Safe
-}
-
-func (e stdlib.Ensemble) GetName() string {
-	return e.Name
-}
-
-func (e stdlib.Ensemble) Execute(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
-	name := slices.Fst(args).String()
-	x := sort.Search(len(e.List), func(i int) bool {
-		return getName(e.List[i]) >= name
-	})
-	if x >= len(e.List) || getName(e.List[x]) != name {
-		return nil, fmt.Errorf("%s %s: command not defined", e.Name, name)
-	}
-	return e.List[x].Execute(i, slices.Rest(args))
 }
 
 func getName(e stdlib.Executer) string {
@@ -847,12 +798,12 @@ func DefaultSet() CommandSet {
 	set.registerCmd("llength", RunListLen())
 	set.registerCmd("proc", RunProc())
 	set.registerCmd("string", MakeString())
-	set.registerCmd("interp", MakeInterp())
+	set.registerCmd("interp", stdlib.MakeInterp())
 	set.registerCmd("eval", RunEval())
 	set.registerCmd("upvar", RunUpvar())
 	set.registerCmd("uplevel", RunUplevel())
 	set.registerCmd("incr", RunIncr())
-	set.registerCmd("namespace", MakeNamespace())
+	set.registerCmd("namespace", stdlib.MakeNamespace())
 	set.registerCmd("parray", RunPrintArray())
 	set.registerCmd("array", MakeArray())
 	return set
