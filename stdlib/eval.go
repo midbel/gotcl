@@ -9,11 +9,6 @@ import (
 	"github.com/midbel/slices"
 )
 
-type ProcHandler interface {
-	Interpreter
-	RegisterProc(string, string, string) error
-}
-
 type DeferHandler interface {
 	Interpreter
 	RegisterDefer(string) error

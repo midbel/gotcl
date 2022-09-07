@@ -36,6 +36,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("namespace", stdlib.MakeNamespace())
 	set.registerCmd("parray", stdlib.PrintArray())
 	set.registerCmd("array", stdlib.MakeArray())
+	set.registerCmd("info", stdlib.MakeInfo())
 	return set
 }
 
