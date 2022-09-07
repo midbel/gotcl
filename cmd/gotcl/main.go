@@ -20,7 +20,7 @@ func main() {
 	)
 	flag.Parse()
 
-	i := interp.New()
+	i := interp.Interpret()
 	if *config != "" {
 		_, err := executeFile(i, *config)
 		if err != nil {
@@ -30,7 +30,7 @@ func main() {
 	}
 	var err error
 	if flag.NArg() == 0 {
-		err = runREPL(interp.Interactive(i))
+		err = runREPL(i)
 	} else {
 		err = runFile(i, flag.Arg(0))
 	}
@@ -74,8 +74,8 @@ func runREPL(i stdlib.Interpreter) error {
 			}
 			fmt.Fprintf(os.Stderr, fmt.Sprintf(nok, cmd, err))
 			fmt.Fprintln(os.Stderr)
-		} else if res != "" {
-			fmt.Fprintf(os.Stdout, ok, cmd, strings.TrimSpace(res))
+		} else if res != nil {
+			fmt.Fprintf(os.Stdout, ok, cmd, strings.TrimSpace(res.String()))
 			fmt.Fprintln(os.Stdout)
 		}
 		cmd++
@@ -98,5 +98,9 @@ func executeFile(i stdlib.Interpreter, file string) (string, error) {
 		return "", err
 	}
 	defer r.Close()
-	return i.Execute(r)
+	val, err := i.Execute(r)
+	if err != nil {
+		return "", err
+	}
+	return val.String(), nil
 }

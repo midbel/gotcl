@@ -1,187 +1,177 @@
 package interp
 
 import (
+	"errors"
 	"fmt"
+	"os/exec"
 	"sort"
 
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/gotcl/stdlib"
+	"github.com/midbel/slices"
 )
 
-type CmdError struct {
-	Err     error
-	Unknown stdlib.Executer
-}
-
-func (c *CmdError) Error() string {
-	return c.Err.Error()
-}
+var ErrUndefined = errors.New("undefined name")
 
 type Namespace struct {
 	Name     string
-	Parent   *Namespace
-	Children []*Namespace
-	Exported []string
+	parent   *Namespace
+	children []*Namespace
 
-	env env.Environment
+	env *env.Env
 	CommandSet
-	Unknown stdlib.Executer
+	unknown stdlib.CommandFunc
 }
 
-func Global() *Namespace {
-	var (
-		root = create("", DefaultSet())
-		tcl  = create("tcl", EmptySet())
-		mop  = Mathop()
-		mnc  = Mathfunc()
-	)
-	tcl.appendNS(mop)
-	tcl.appendNS(mnc)
-	root.appendNS(tcl)
-
-	root.Unknown = createExecuter(unknownDefault)
-
-	return root
+func EmptyNS(name string) *Namespace {
+	return createNS(name, make(CommandSet))
 }
 
-func Mathfunc() *Namespace {
-	return create("mathfunc", MathfuncSet())
-}
-
-func Mathop() *Namespace {
-	return create("mathop", MathopSet())
-}
-
-func Prepare(name string) *Namespace {
-	return create(name, EmptySet())
-}
-
-func (ns *Namespace) Root() bool {
-	return ns.Parent == nil
-}
-
-func (ns *Namespace) Command(names []string) (stdlib.Executer, error) {
-	names, err := ns.validLookup(names)
-	if err != nil {
-		return nil, err
-	}
-	if len(names) == 1 {
-		exec, err := ns.Lookup(names[0])
-		if err != nil && !ns.Root() {
-			return ns.Parent.Command(names)
+func GlobalNS() *Namespace {
+	ns := createNS("", DefaultSet())
+	ns.RegisterNS(UtilNS())
+	ns.unknown = func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+		var (
+			name   = slices.Fst(args).String()
+			values []string
+		)
+		for _, a := range slices.Rest(args) {
+			values = append(values, a.String())
 		}
-		if err != nil {
-			err = &CmdError{
-				Err:     fmt.Errorf("%s: %w", names[0], ErrLookup),
-				Unknown: ns.Unknown,
-			}
-		}
-		return exec, err
+		res, err := exec.Command(name, values...).Output()
+		return env.Str(string(res)), err
 	}
-	sub, _, err := ns.getNS(names[0])
-	if err != nil {
-		return nil, err
-	}
-	return sub.Command(names[1:])
+	return ns
 }
 
-func (ns *Namespace) Lookup(name string) (stdlib.Executer, error) {
-	exec, err := ns.CommandSet.Lookup(name)
-	if err == nil {
-		return exec, err
-	}
-	if ns.Root() {
-		return nil, fmt.Errorf("%s: undefined proc", name)
-	}
-	return ns.Parent.Lookup(name)
+func UtilNS() *Namespace {
+	ns := createNS("util", UtilSet())
+	ns.env.Define("version", env.Str("1.12.189"))
+	return ns
 }
 
-func (ns *Namespace) RegisterProc(name, args, body string) error {
-	return ns.CommandSet.RegisterProc(name, args, body)
+func emptyNS(name string) *Namespace {
+	return createNS(name, make(CommandSet))
 }
 
-func (ns *Namespace) FQN() string {
-	if ns.Root() {
-		return "::"
-	}
-	if ns.Parent.Root() {
-		return "::" + ns.Name
-	}
-	return ns.Parent.FQN() + "::" + ns.Name
-}
-
-func (ns *Namespace) Delete(name string) {
-	_, i, _ := ns.getNS(name)
-	ns.Children = append(ns.Children[:i], ns.Children[i+1:]...)
-}
-
-func (ns *Namespace) Get(names []string) (*Namespace, error) {
-	if len(names) == 0 {
-		if ns.Root() {
-			return ns, nil
-		}
-		return ns, nil
-	}
-	names, err := ns.validLookup(names)
-	if err != nil {
-		return nil, err
-	}
-	sub, _, err := ns.getNS(names[0])
-	if err != nil {
-		return nil, err
-	}
-	if len(names) > 1 {
-		return sub.Get(names[1:])
-	}
-	return sub, nil
-}
-
-func (ns *Namespace) GetOrCreate(names []string) (*Namespace, error) {
-	sub, i, err := ns.getNS(names[0])
-	if err == nil {
-		if len(names) == 1 {
-			return sub, nil
-		}
-		return sub.GetOrCreate(names[1:])
-	}
-	var (
-		curr = Prepare(names[0])
-		tmp  = append([]*Namespace{curr}, ns.Children[i:]...)
-	)
-	curr.Parent = ns
-	ns.Children = append(ns.Children[:i], tmp...)
-	return curr, nil
-}
-
-func (ns *Namespace) appendNS(c *Namespace) {
-	c.Parent = ns
-	ns.Children = append(ns.Children, c)
-}
-
-func (ns *Namespace) getNS(name string) (*Namespace, int, error) {
-	i := sort.Search(len(ns.Children), func(i int) bool {
-		return name >= ns.Children[i].Name
-	})
-	if i < len(ns.Children) && ns.Children[i].Name == name {
-		return ns.Children[i], i, nil
-	}
-	return nil, i, fmt.Errorf("%s: namespace not defined", name)
-}
-
-func (ns *Namespace) validLookup(names []string) ([]string, error) {
-	if names[0] != "" {
-		return names, nil
-	}
-	if !ns.Root() {
-		return names, fmt.Errorf("absolute namespace path from non root namespace!")
-	}
-	return names[1:], nil
-}
-
-func create(name string, set CommandSet) *Namespace {
+func createNS(name string, set CommandSet) *Namespace {
 	return &Namespace{
 		Name:       name,
 		CommandSet: set,
 		env:        env.EmptyEnv(),
 	}
+}
+
+func (n *Namespace) GetName() string {
+	return n.Name
+}
+
+func (n *Namespace) Resolve(v string) (env.Value, error) {
+	return n.env.Resolve(v)
+}
+
+func (n *Namespace) RegisterNS(ns *Namespace) error {
+	ns.parent = n
+	x := sort.Search(len(n.children), func(i int) bool {
+		return ns.Name >= n.children[i].Name
+	})
+	if x < len(n.children) && n.children[x].Name == ns.Name {
+		return fmt.Errorf("namespace %s already exists", ns.Name)
+	}
+	tmp := append([]*Namespace{ns}, n.children[x:]...)
+	n.children = append(n.children[:x], tmp...)
+	return nil
+}
+
+func (n *Namespace) LookupNS(name []string) (*Namespace, error) {
+	if len(name) == 0 {
+		return n, nil
+	}
+	name, err := n.validNS(name)
+	if err != nil {
+		return nil, err
+	}
+	ns, err := n.lookupNS(name[0])
+	if err == nil {
+		if len(name) == 1 {
+			return ns, nil
+		}
+		return ns.LookupNS(name[1:])
+	}
+	return nil, err
+}
+
+func (n *Namespace) RegisterExec(name []string, exec stdlib.Executer) error {
+	name, err := n.validNS(name)
+	if err != nil {
+		return err
+	}
+	if len(name) == 1 {
+		n.CommandSet[name[0]] = exec
+		return nil
+	}
+	ns, err := n.lookupNS(name[0])
+	if err == nil {
+		return ns.RegisterExec(name[1:], exec)
+	}
+	return err
+}
+
+func (n *Namespace) LookupExec(name []string) (stdlib.Executer, error) {
+	name, err := n.validNS(name)
+	if err != nil {
+		return nil, err
+	}
+	if len(name) > 1 && len(n.children) == 0 {
+		return nil, fmt.Errorf("executer (lookup) %s (%s): %w", name[0], n.FQN(), ErrUndefined)
+	}
+	if len(name) == 1 {
+		exec, ok := n.CommandSet[name[0]]
+		if ok {
+			return exec, nil
+		}
+		if !n.Root() {
+			return n.parent.LookupExec(name)
+		}
+		return nil, fmt.Errorf("executer (lookup) %s (%s): %w", name[0], n.FQN(), ErrUndefined)
+	}
+	ns, err := n.lookupNS(name[0])
+	if err == nil {
+		return ns.LookupExec(name[1:])
+	}
+	return nil, err
+}
+
+func (n *Namespace) Root() bool {
+	return n.parent == nil
+}
+
+func (n *Namespace) FQN() string {
+	if n.Root() {
+		return "::"
+	}
+	if n.parent.Root() {
+		return "::" + n.Name
+	}
+	return n.parent.FQN() + "::" + n.Name
+}
+
+func (n *Namespace) lookupNS(name string) (*Namespace, error) {
+	x := sort.Search(len(n.children), func(i int) bool {
+		return name >= n.children[i].Name
+	})
+	if x < len(n.children) && n.children[x].Name == name {
+		return n.children[x], nil
+	}
+	return nil, fmt.Errorf("namespace %s (%s): %w", name, n.FQN(), ErrUndefined)
+}
+
+func (n *Namespace) validNS(name []string) ([]string, error) {
+	if len(name) > 0 && name[0] == "" {
+		if !n.Root() {
+			return nil, fmt.Errorf("namespace %s: invalid name", name)
+		}
+		name = name[1:]
+	}
+	return name, nil
 }

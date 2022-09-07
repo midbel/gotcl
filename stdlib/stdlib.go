@@ -11,7 +11,10 @@ import (
 	"github.com/midbel/slices"
 )
 
-var ErrArgument = errors.New("wrong number of argument given")
+var (
+	ErrArgument = errors.New("wrong number of argument given")
+	ErrExit     = errors.New("exit")
+)
 
 type Interpreter interface {
 	Execute(io.Reader) (env.Value, error)

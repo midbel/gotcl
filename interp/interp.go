@@ -6,437 +6,393 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/midbel/gotcl/env"
-	"github.com/midbel/gotcl/glob"
 	"github.com/midbel/gotcl/stdlib"
 	"github.com/midbel/slices"
 )
 
-const Version = "0.1.2"
+type Interpreter struct {
+	last   env.Value
+	count  int
+	safe   bool
+	frames []*Frame
 
-const (
-	argc     = "argc"
-	argv     = "argv"
-	arg0     = "argv0"
-	tclcmd   = "tcl_command"
-	tclver   = "tcl_version"
-	tcldepth = "tcl_depth"
-	envvar   = "env"
-)
+	Out io.Writer
+	Err io.Writer
 
-type Interp struct {
-	*FileSet
-	*Env
-
-	root *Namespace
-	*Namespace
-
-	Count int
+	name     string
+	parent   *Interpreter
+	children []*Interpreter
 }
 
-func New() stdlib.Interpreter {
-	i := &Interp{
-		FileSet: Stdio(),
-		Env:     Environ(),
-		root:    Global(),
-	}
-	i.Namespace = i.root
-	return i
+func Interpret() *Interpreter {
+	return defaultInterpreter("", true)
 }
 
-func (i *Interp) Globals(pat string) []string {
-	var (
-		list = []string{argc, argv, arg0, tclcmd, tclver, tcldepth, envvar}
-		root = i.Env.Root()
-	)
-	if a, ok := root.(interface{ All() []string }); ok {
-		list = append(list, a.All()...)
+func defaultInterpreter(name string, safe bool) *Interpreter {
+	i := Interpreter{
+		Out:  os.Stdout,
+		Err:  os.Stderr,
+		safe: safe,
+		name: name,
 	}
-	sort.Strings(list)
-	return glob.Filter(list, pat)
+	i.push(GlobalNS())
+	return &i
 }
 
-func (i *Interp) Locals(pat string) []string {
-	a, ok := i.Env.Current().(interface{ All() []string })
-	if !ok {
-		return nil
-	}
-	list := a.All()
-	sort.Strings(list)
-	return glob.Filter(list, pat)
-}
-
-func (i *Interp) Variables(pat string) []string {
-	var list []string
-	list = append(list, i.Globals("")...)
-	list = append(list, i.Locals("")...)
-	if !i.Namespace.Root() {
-		a, ok := i.Namespace.env.(interface{ All() []string })
-		if ok {
-			list = append(list, a.All()...)
-		}
-	}
-	sort.Strings(list)
-	return glob.Filter(list, pat)
-}
-
-func (i *Interp) Valid(cmd string) (bool, error) {
-	b, err := Build(strings.NewReader(cmd))
-	if err != nil {
-		return false, err
-	}
-	_, err = b.Next(i)
-	return err == nil, err
-}
-
-func (i *Interp) ResolveVar(name string) (string, error) {
-	if i.Namespace.Root() {
-		return "", fmt.Errorf("variable can not be resolved in global namespace")
-	}
-	return i.Namespace.env.Resolve(name)
-}
-
-func (i *Interp) RegisterVar(name, value string) error {
-	if i.Namespace.Root() {
-		return fmt.Errorf("variable can not be defined in global namespace")
-	}
-	i.Namespace.env.Define(name, value)
-	return nil
-}
-
-func (i *Interp) ExistsNS(name string) bool {
-	if name == "" {
-		return true
-	}
-	_, err := i.lookupNS(name)
-	return err == nil
-}
-
-func (i *Interp) CurrentNS() string {
-	return i.Namespace.FQN()
-}
-
-func (i *Interp) ParentNS(name string) (string, error) {
-	var (
-		ns  *Namespace
-		err error
-	)
-	if name == "" {
-		ns = i.Namespace
-	} else {
-		ns, err = i.lookupNS(name)
-		if err != nil {
-			return "", err
-		}
-	}
-	if ns.Root() {
-		return "", nil
-	}
-	return ns.Parent.FQN(), nil
-}
-
-func (i *Interp) ChildrenNS(name, pat string) ([]string, error) {
-	var (
-		ns  *Namespace
-		err error
-	)
-	if name == "" {
-		ns = i.Namespace
-	} else {
-		ns, err = i.lookupNS(name)
-		if err != nil {
-			return nil, err
-		}
-	}
-	var list []string
-	for _, c := range ns.Children {
-		list = append(list, c.FQN())
-	}
-	return glob.Filter(list, pat), nil
-}
-
-func (i *Interp) RegisterNS(name, script string) error {
-	names := strings.Split(name, "::")
-	if len(names) == 0 {
-		return fmt.Errorf("invalid name for namespace")
-	}
-	ns, err := i.Namespace.GetOrCreate(names)
-	if err != nil {
+func (i *Interpreter) RegisterNS(name, body string) error {
+	ns := emptyNS(name)
+	if err := i.currentNS().RegisterNS(ns); err != nil {
 		return err
 	}
-	old := i.Namespace
-	defer func() {
-		i.Namespace = old
-	}()
-	i.Namespace = ns
-	_, err = i.Execute(strings.NewReader(script))
+	i.push(ns)
+	defer i.pop()
+
+	// body = strings.TrimSpace(body)
+	_, err := i.Execute(strings.NewReader(body))
 	return err
 }
 
-func (i *Interp) UnregisterNS(name string) error {
-	if name == "" {
-		return nil
-	}
-	ns, err := i.lookupNS(name)
-	if err != nil {
-		return err
-	}
-	if ns.Root() {
-		return fmt.Errorf("global namespace can not be deleted")
-	}
-	ns.Parent.Delete(ns.Name)
+func (i *Interpreter) UnregisterNS(name string) error {
 	return nil
 }
 
-func (i *Interp) CmdDepth() int {
-	return i.Env.Depth()
-}
-
-func (i *Interp) CmdCount() int {
-	return i.Count
-}
-
-func (i *Interp) Version() string {
-	return Version
-}
-
-func (i *Interp) Define(name, value string) error {
-	if isSpecial(name) {
-		return env.ErrForbidden
+func (i *Interpreter) LinkVar(src, dst string, level int) error {
+	if i.Depth() <= 1 {
+		return fmt.Errorf("can not link variables in global level")
 	}
-	return i.Env.Define(name, value)
+	depth := i.Depth() - 1
+	if depth < level {
+		return fmt.Errorf("can not link variables in level %d", level)
+	}
+	depth -= level
+	i.currentFrame().Define(dst, env.NewLink(src, depth))
+	return nil
 }
 
-func (i *Interp) Resolve(name string) (string, error) {
-	name, key, err := env.ParseName(name)
+func (i *Interpreter) Root() bool {
+	return i.parent == nil
+}
+
+func (i *Interpreter) GetName() string {
+	return i.name
+}
+
+func (i *Interpreter) IsSafe() bool {
+	return i.safe
+}
+
+func (i *Interpreter) LookupInterpreter(name []string) (*Interpreter, error) {
+	if len(name) == 0 {
+		return i, nil
+	}
+	x := sort.Search(len(i.children), func(j int) bool {
+		return i.children[j].name >= name[0]
+	})
+	if x < len(i.children) && i.children[x].name == name[0] {
+		if len(name) == 1 {
+			return i.children[x], nil
+		}
+		return i.children[x].LookupInterpreter((name[1:]))
+	}
+	return nil, fmt.Errorf("%s: interpreter not registered", name[0])
+}
+
+func (i *Interpreter) RegisterInterpreter(name []string, safe bool) (string, error) {
+	p, err := i.LookupInterpreter(name[:len(name)-1])
 	if err != nil {
 		return "", err
 	}
-	switch name {
-	case argc:
-		n := len(os.Args) - 1
-		return strconv.Itoa(n), nil
-	case argv:
-		return strings.Join(os.Args[1:], " "), nil
-	case arg0:
-		return os.Args[0], nil
-	case tclcmd:
-		return strconv.Itoa(i.Count), nil
-	case tcldepth:
-		return strconv.Itoa(i.CmdDepth()), nil
-	case tclver:
-		return i.Version(), nil
-	case envvar:
-		return os.Getenv(key), nil
+	s := defaultInterpreter(name[len(name)-1], safe)
+	s.parent = p
+
+	x := sort.Search(len(p.children), func(i int) bool {
+		return p.children[i].name >= s.name
+	})
+	if x < len(p.children) && p.children[x].name == s.name {
+		return "", fmt.Errorf("%s: interpreter already registered", s.name)
+	}
+	tmp := append([]*Interpreter{s}, p.children[x:]...)
+	p.children = append(p.children, tmp...)
+	return s.name, nil
+}
+
+func (i *Interpreter) UnregisterInterpreter(name []string) error {
+	p, err := i.LookupInterpreter(name[:len(name)-1])
+	if err != nil {
+		return err
+	}
+	if n := len(p.children); n == 0 {
+		return nil
+	} else if n == 1 {
+		p.children = p.children[:0]
+	}
+	n := name[len(name)-1]
+	x := sort.Search(len(p.children), func(i int) bool {
+		return p.children[i].name >= n
+	})
+	if x < len(p.children) && p.children[x].name == n {
+		return fmt.Errorf("%s: interpreter not registered", n)
+	}
+	p.children = append(p.children[:x], p.children[x+1:]...)
+	return nil
+}
+
+func (i *Interpreter) InterpretersList() []string {
+	var list []string
+	for _, c := range i.children {
+		list = append(list, c.name)
+	}
+	return list
+}
+
+func (i *Interpreter) GetHelp(name string) (string, error) {
+	exec, err := i.currentNS().LookupExec([]string{name})
+	if err != nil {
+		return "", err
+	}
+	var help string
+	switch e := exec.(type) {
+	case stdlib.Builtin:
+		help = e.Help
+	case stdlib.Ensemble:
+		help = e.Help
 	default:
-		return i.resolve(name)
+		return "", fmt.Errorf("%s: can not retrieve help", name)
 	}
+	return help, nil
 }
 
-func (i *Interp) Delete(name string) error {
-	if isSpecial(name) {
-		return env.ErrForbidden
-	}
-	return i.Env.Delete(name)
-}
-
-func (i *Interp) Exists(name string) bool {
-	if isSpecial(name) {
-		return true
-	}
-	return i.Env.Exists(name)
-}
-
-func (i *Interp) IsSet(name string) bool {
-	if isSpecial(name) {
-		return true
-	}
-	return i.Env.IsSet(name)
-}
-
-func (i *Interp) Link(dst string, src string) error {
-	if isSpecial(src) {
-		return env.ErrForbidden
-	}
-	return i.Env.Link(dst, src)
-}
-
-func (i *Interp) LinkAt(dst string, src string, level int) error {
-	if isSpecial(src) {
-		return env.ErrForbidden
-	}
-	return i.Env.LinkAt(dst, src, level)
-}
-
-func (i *Interp) Do(name string, do func(string) (string, error)) (string, error) {
-	res, err := i.Resolve(name)
-	if err != nil {
-		return res, err
-	}
-	res, err = do(res)
+func (i *Interpreter) RegisterDefer(body string) error {
+	name := fmt.Sprintf("defer%d", i.Count())
+	exec, err := createProcedure(name, body, "")
 	if err == nil {
-		err = i.Define(name, res)
+		i.registerDefer(exec)
 	}
-	return res, err
+	return err
 }
 
-func (i *Interp) Split(str string) ([]string, error) {
-	list, err := scan(str)
+func (i *Interpreter) RegisterProc(name, body, args string) error {
+	exec, err := createProcedure(name, body, args)
 	if err == nil {
-		list = slices.Filter(list, func(v string) bool { return v != "" })
+		i.currentNS().RegisterExec([]string{name}, exec)
 	}
-	return list, err
+	return err
 }
 
-func (i *Interp) Execute(r io.Reader) (string, error) {
-	return i.execute(r)
+func (i *Interpreter) Define(n string, v env.Value) {
+	tmp, err := i.currentFrame().Resolve(n)
+	if err == nil {
+		k, ok := tmp.(env.Link)
+		if ok {
+			i.frames[k.At()].env.Define(k.String(), v)
+			return
+		}
+	}
+	i.currentFrame().Define(n, v)
 }
 
-func (i *Interp) ExecuteUp(r io.Reader, level int) (string, error) {
+func (i *Interpreter) Delete(n string) {
+	v, err := i.currentFrame().Resolve(n)
+	if err == nil {
+		k, ok := v.(env.Link)
+		if ok {
+			i.frames[k.At()].env.Delete(k.String())
+		}
+	}
+	i.currentFrame().Delete(n)
+}
+
+func (i *Interpreter) Resolve(n string) (env.Value, error) {
+	name := strings.Split(n, "::")
+	if len(name) == 1 {
+		v, err := i.currentFrame().Resolve(n)
+		if err != nil {
+			return nil, err
+		}
+		if k, ok := v.(env.Link); ok {
+			v, err = i.frames[k.At()].env.Resolve(k.String())
+		}
+		return v, err
+	}
 	var (
+		ps  = slices.Slice(name)
+		vs  = slices.Lst(name)
+		ns  *Namespace
 		err error
-		old = i.Env
 	)
-	defer func() {
-		i.Env = old
-	}()
-	i.Env, err = i.Env.Sub(level)
-	if err != nil {
-		return "", err
+	if ps[0] == "" {
+		ns, err = i.rootNS().LookupNS(ps[1:])
+	} else {
+		ns, err = i.currentNS().LookupNS(ps)
 	}
+	if err != nil {
+		return nil, err
+	}
+	v, err := ns.Resolve(vs)
+	if err != nil {
+		return nil, err
+	}
+	if k, ok := v.(env.Link); ok {
+		v, err = i.frames[k.At()].env.Resolve(k.String())
+	}
+	return v, err
+}
+
+func (i *Interpreter) Print(ch, msg string, nl bool) error {
+	var w io.Writer
+	switch ch {
+	case "stdout":
+		w = i.Out
+	case "stderr":
+		w = i.Err
+	default:
+		return fmt.Errorf("%s: unknown channel", ch)
+	}
+	fmt.Fprint(w, msg)
+	if nl {
+		fmt.Fprintln(w)
+	}
+	return nil
+}
+
+func (i *Interpreter) Depth() int {
+	return len(i.frames)
+}
+
+func (i *Interpreter) Count() int {
+	return i.count
+}
+
+func (i *Interpreter) ExecuteLevel(r io.Reader, level int, abs bool) (env.Value, error) {
+	if !abs {
+		level = i.Depth() - level
+	}
+	old := append([]*Frame{}, i.frames...)
+	defer func() {
+		i.frames = old
+	}()
+	i.frames = i.frames[:level]
 	return i.Execute(r)
 }
 
-func (i *Interp) execute(r io.Reader) (string, error) {
-	b, err := Build(r)
-	if err != nil {
-		return "", err
+func (i *Interpreter) Execute(r io.Reader) (env.Value, error) {
+	if i.currentNS().Root() && i.count == 0 {
+		defer i.executeDefer()
 	}
-	var last string
+	p, err := New(r)
+	if err != nil {
+		return nil, err
+	}
 	for {
-		c, err := b.Next(i)
+		c, err := p.Parse(i)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return last, err
+			return nil, err
 		}
-		last, err = i.executeCmd(c)
-		i.Count++
+		i.last, err = i.execute(c)
 		if err != nil {
-			switch {
-			case errors.Is(err, stdlib.ErrExit):
-			case errors.Is(err, stdlib.ErrReturn):
-				err = nil
-			default:
-			}
-			return last, err
+			return nil, err
 		}
+		// if i.last != nil {
+		// 	fmt.Fprintln(i.Out, ">> ", i.last)
+		// }
 	}
-	return last, nil
+	return i.last, nil
 }
 
-func (i *Interp) executeCmd(c *Command) (string, error) {
+func (i *Interpreter) execute(c *Command) (env.Value, error) {
 	var (
-		names = strings.Split(c.Cmd, "::")
-		exec  stdlib.Executer
-		root  bool
+		parts = strings.Split(c.Name.String(), "::")
+		ns    *Namespace
 		err   error
 	)
-	if len(names) > 0 && names[0] == "" {
-		exec, err = i.root.Command(names[1:])
-		root = true
+	if n := len(parts); n > 1 {
+		ns, err = i.currentNS().LookupNS(slices.Slice(parts))
 	} else {
-		exec, err = i.Command(names)
+		ns = i.currentNS()
 	}
 	if err != nil {
-		var cerr *CmdError
-		if errors.As(err, &cerr) && cerr.Unknown != nil {
-			args := []string{c.Cmd}
-			return cerr.Unknown.Execute(i, append(args, c.Args...))
+		return nil, err
+	}
+	exec, err := ns.LookupExec(slices.Take(parts, len(parts)-1))
+	if err != nil {
+		if ns.unknown != nil {
+			return ns.unknown(i, slices.Prepend(c.Name, c.Args))
 		}
-		return "", err
+		return nil, err
+	}
+	if !i.isSafe(exec) {
+		return nil, fmt.Errorf("command %s: can not be execute in unsafe interpreter", c.Name.String())
 	}
 	if _, ok := exec.(procedure); ok {
-		var sub *Namespace
-		if ns := names[:len(names)-1]; root {
-			sub, err = i.root.Get(ns)
-		} else {
-			sub, err = i.Namespace.Get(ns)
-		}
-		if err != nil {
-			return "", err
-		}
-		i.Env.Append()
-		defer i.Env.Pop()
-
-		old := i.Namespace
-		defer func() {
-			i.Namespace = old
-		}()
-		i.Namespace = sub
+		i.push(ns)
+		defer i.executeDefer()
 	}
-
-	res, err := exec.Execute(i, c.Args)
-	if err != nil {
-		err = fmt.Errorf("%s: %w", c.Cmd, err)
-	}
-	return res, err
+	defer func() {
+		i.count++
+	}()
+	return exec.Execute(i, c.Args)
 }
 
-func (i *Interp) resolve(name string) (string, error) {
-	v, err := i.Env.Resolve(name)
-	if err == nil {
-		return v, err
+func (i *Interpreter) isSafe(exec stdlib.Executer) bool {
+	if i.Root() {
+		return true
 	}
-	names := strings.Split(name, "::")
-	if len(names) == 1 {
-		return i.Namespace.env.Resolve(name)
-	}
-	name = names[len(names)-1]
-	ns, err := i.lookupNS(strings.Join(names[:len(names)-1], "::"))
-	if err != nil {
-		return "", err
-	}
-	return ns.env.Resolve(name)
+	return !i.safe || (i.safe && exec.IsSafe())
 }
 
-func (i *Interp) lookupNS(name string) (*Namespace, error) {
-	names := strings.Split(name, "::")
-	if len(names) == 0 {
-		return nil, fmt.Errorf("invalid namespace name")
+func (i *Interpreter) push(ns *Namespace) {
+	f := &Frame{
+		env: env.EmptyEnv(),
+		ns:  ns,
 	}
-	if len(names) > 0 && names[0] == "" {
-		return i.root.Get(names[1:])
-	}
-	return i.Namespace.Get(names)
+	i.frames = append(i.frames, f)
 }
 
-type Interact struct {
-	stdlib.Interpreter
-	History []string
+func (i *Interpreter) pop() {
+	n := len(i.frames)
+	if n == 1 {
+		return
+	}
+	i.frames = i.frames[:n-1]
 }
 
-func Interactive(i stdlib.Interpreter) stdlib.Interpreter {
-	return &Interact{
-		Interpreter: i,
-	}
+func (i *Interpreter) rootNS() *Namespace {
+	f := slices.Fst(i.frames)
+	return f.ns
 }
 
-func isSpecial(name string) bool {
-	switch name {
-	default:
-		return false
-	case argc:
-	case argv:
-	case arg0:
-	case tclcmd:
-	case tclver:
-	case tcldepth:
-	case envvar:
+func (i *Interpreter) currentNS() *Namespace {
+	f := slices.Lst(i.frames)
+	return f.ns
+}
+
+func (i *Interpreter) rootFrame() *Frame {
+	return slices.Fst(i.frames)
+}
+
+func (i *Interpreter) currentFrame() *Frame {
+	return slices.Lst(i.frames)
+}
+
+func (i *Interpreter) registerDefer(exec stdlib.Executer) {
+	curr := i.currentFrame()
+	curr.deferred = append(curr.deferred, exec)
+}
+
+func (i *Interpreter) executeDefer() {
+	defer i.pop()
+	var (
+		last = i.last
+		list = slices.Lst(i.frames).deferred
+	)
+	for j := len(list) - 1; j >= 0; j-- {
+		list[j].Execute(i, nil)
 	}
-	return true
+	i.last = last
 }
