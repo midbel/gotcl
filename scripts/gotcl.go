@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/midbel/gotcl/env"
@@ -310,7 +309,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("unset", stdlib.RunUnset())
 	set.registerCmd("list", stdlib.RunList())
 	set.registerCmd("llength", stdlib.RunListLen())
-	set.registerCmd("proc", RunProc())
+	set.registerCmd("proc", stdlib.RunProc())
 	set.registerCmd("string", stdlib.MakeString())
 	set.registerCmd("interp", stdlib.MakeInterp())
 	set.registerCmd("eval", stdlib.RunEval())
@@ -748,6 +747,23 @@ func (i *Interpreter) Resolve(n string) (env.Value, error) {
 	return v, err
 }
 
+func (i *Interpreter) Print(ch, msg string, nl bool) error {
+	var w io.Writer
+	switch ch {
+	case "stdout":
+		w = i.Out
+	case "stderr":
+		w = i.Err
+	default:
+		return fmt.Errorf("%s: unknown channel", ch)
+	}
+	fmt.Fprint(w, msg)
+	if nl {
+		fmt.Fprintln(w)
+	}
+	return nil
+}
+
 func (i *Interpreter) Depth() int {
 	return len(i.frames)
 }
@@ -756,7 +772,10 @@ func (i *Interpreter) Count() int {
 	return i.count
 }
 
-func (i *Interpreter) Level(r io.Reader, level int) (env.Value, error) {
+func (i *Interpreter) ExecuteLevel(r io.Reader, level int, abs bool) (env.Value, error) {
+	if !abs {
+		level = i.Depth() - level
+	}
 	old := append([]*Frame{}, i.frames...)
 	defer func() {
 		i.frames = old

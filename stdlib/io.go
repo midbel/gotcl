@@ -2,11 +2,14 @@ package stdlib
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/slices"
 )
+
+type PrintHandler interface {
+	Print(string, string, bool) error
+}
 
 func RunPuts() Executer {
 	return Builtin{
@@ -29,21 +32,17 @@ func RunPuts() Executer {
 			},
 		},
 		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			str, err := i.Resolve("channel")
+			ch, err := i.Resolve("channel")
 			if err != nil {
 				return nil, err
 			}
-			var ch io.Writer
-			switch str.String() {
-			case "stdout":
-				ch = i.Out
-			case "stderr":
-				ch = i.Err
-			default:
-				return nil, nil
+			ph, ok := i.(PrintHandler)
+			if !ok {
+				return nil, fmt.Errorf("interpreter can not print message to channel")
 			}
-			fmt.Fprintln(ch, slices.Fst(args))
-			return env.EmptyStr(), nil
+			nonl, _ := i.Resolve("nonewline")
+			err = ph.Print(ch.String(), slices.Fst(args).String(), !env.ToBool(nonl))
+			return env.EmptyStr(), err
 		},
 	}
 }

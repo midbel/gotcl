@@ -2,6 +2,7 @@ package stdlib
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/midbel/gotcl/env"
@@ -73,10 +74,13 @@ func RunUplevel() Executer {
 			} else {
 				level++
 			}
-			if !abs {
-				level = i.Depth() - level
+			n, ok := i.(interface {
+				ExecuteLevel(io.Reader, int, bool) (env.Value, error)
+			})
+			if !ok {
+				return nil, fmt.Errorf("interpreter can not execute script in a parent level")
 			}
-			return i.Level(strings.NewReader(slices.Fst(args).String()), level)
+			return n.ExecuteLevel(strings.NewReader(slices.Fst(args).String()), level, abs)
 		},
 	}
 }

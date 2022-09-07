@@ -33,12 +33,32 @@ func EmptyArr() Value {
 	}
 }
 
+func (a Array) Len() int {
+	return len(a.values)
+}
+
 func (a Array) Get(n string) Value {
 	return a.values[n]
 }
 
 func (a Array) Set(n string, v Value) {
 	a.values[n] = v
+}
+
+func (a Array) Pairs() Value {
+	var list []Value
+	for k, v := range a.values {
+		list = append(list, ListFrom(Str(k), v))
+	}
+	return ListFrom(list...)
+}
+
+func (a Array) Names() []string {
+	var list []string
+	for k := range a.values {
+		list = append(list, k)
+	}
+	return list
 }
 
 func (a Array) String() string {

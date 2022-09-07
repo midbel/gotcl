@@ -49,14 +49,7 @@ func MakeArray() Executer {
 					if err != nil {
 						return nil, err
 					}
-					var (
-						g  = arr.(env.Array)
-						vs []env.Value
-					)
-					for k, v := range g.values {
-						vs = append(vs, env.ListFrom(env.Str(k), v))
-					}
-					return env.ListFrom(vs...), nil
+					return arr.(env.Array).Pairs(), nil
 				},
 			},
 			Builtin{
@@ -71,14 +64,8 @@ func MakeArray() Executer {
 					if err != nil {
 						return nil, err
 					}
-					var (
-						g  = arr.(env.Array)
-						vs []string
-					)
-					for k := range g.values {
-						vs = append(vs, k)
-					}
-					return env.ListFromStrings(vs), nil
+					list := arr.(env.Array).Names()
+					return env.ListFromStrings(list), nil
 				},
 			},
 			Builtin{
@@ -110,10 +97,14 @@ func PrintArray() Executer {
 			if err != nil {
 				return nil, err
 			}
+			ph, ok := i.(PrintHandler)
+			if !ok {
+				return nil, fmt.Errorf("interpreter can not print array to channel")
+			}
 			vs := arr.(env.Array)
-			for k, v := range vs.values {
-				fmt.Fprintf(i.Out, "%s(%s) = %s", slices.Fst(args), k, v)
-				fmt.Fprintln(i.Out)
+			for _, n := range vs.Names() {
+				msg := fmt.Sprintf("%s(%s) = %s", slices.Fst(args), n, vs.Get(n))
+				ph.Print("stdout", msg, true)
 			}
 			return nil, nil
 		},
