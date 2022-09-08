@@ -16,22 +16,22 @@ func MakeArray() Executer {
 			Builtin{
 				Name:  "set",
 				Arity: 2,
-				Run: arraySet,
+				Run:   arraySet,
 			},
 			Builtin{
 				Name:  "get",
 				Arity: 1,
-				Run: arrayGet,
+				Run:   arrayGet,
 			},
 			Builtin{
 				Name:  "names",
 				Arity: 1,
-				Run: arrayNames,
+				Run:   arrayNames,
 			},
 			Builtin{
 				Name:  "size",
 				Arity: 1,
-				Run: arraySize,
+				Run:   arraySize,
 			},
 		},
 	}
@@ -84,7 +84,7 @@ func arraySize(i Interpreter, args []env.Value) (env.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	z, ok := arr.( interface { Len() int })
+	z, ok := arr.(interface{ Len() int })
 	if !ok {
 		return nil, fmt.Errorf("%s is not an array", slices.Fst(args))
 	}

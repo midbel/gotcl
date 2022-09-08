@@ -10,7 +10,7 @@ func RunList() Executer {
 		Name:  "list",
 		Arity: 1,
 		Safe:  true,
-		Run: runList,
+		Run:   runList,
 	}
 }
 
@@ -19,7 +19,7 @@ func RunListLen() Executer {
 		Name:  "llength",
 		Arity: 1,
 		Safe:  true,
-		Run: runLlength,
+		Run:   runLlength,
 	}
 }
 

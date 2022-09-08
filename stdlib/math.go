@@ -10,7 +10,7 @@ func RunIncr() Executer {
 		Name:  "incr",
 		Arity: 1,
 		Safe:  true,
-		Run: runIncr,
+		Run:   runIncr,
 	}
 }
 

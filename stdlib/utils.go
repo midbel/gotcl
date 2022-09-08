@@ -12,7 +12,7 @@ func RunTypeOf() Executer {
 		Name:  "typeof",
 		Arity: 1,
 		Safe:  true,
-		Run: runTypeof,
+		Run:   runTypeof,
 	}
 }
 
@@ -23,7 +23,7 @@ func RunHelp() Executer {
 
 		Arity: 1,
 		Safe:  true,
-		Run: runHelp,
+		Run:   runHelp,
 	}
 }
 

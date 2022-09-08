@@ -10,7 +10,7 @@ func RunSet() Executer {
 		Name:  "set",
 		Arity: 2,
 		Safe:  true,
-		Run: runSet,
+		Run:   runSet,
 	}
 }
 

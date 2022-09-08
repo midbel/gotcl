@@ -19,7 +19,7 @@ func RunDefer() Executer {
 		Name:  "defer",
 		Arity: 1,
 		Safe:  true,
-		Run: runDefer,
+		Run:   runDefer,
 	}
 }
 
@@ -28,7 +28,7 @@ func RunProc() Executer {
 		Name:  "proc",
 		Arity: 3,
 		Safe:  true,
-		Run: runProc,
+		Run:   runProc,
 	}
 }
 
@@ -38,7 +38,7 @@ func RunUplevel() Executer {
 		Arity:    1,
 		Variadic: true,
 		Safe:     false,
-		Run: runUplevel,
+		Run:      runUplevel,
 	}
 }
 
@@ -48,7 +48,7 @@ func RunUpvar() Executer {
 		Arity:    2,
 		Variadic: true,
 		Safe:     false,
-		Run: runUpvar,
+		Run:      runUpvar,
 	}
 }
 
@@ -58,7 +58,7 @@ func RunEval() Executer {
 		Help:     "eval given script",
 		Variadic: true,
 		Safe:     false,
-		Run: runEval,
+		Run:      runEval,
 	}
 }
 
