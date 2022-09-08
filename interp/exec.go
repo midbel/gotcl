@@ -37,6 +37,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("parray", stdlib.PrintArray())
 	set.registerCmd("array", stdlib.MakeArray())
 	set.registerCmd("info", stdlib.MakeInfo())
+	set.registerCmd("clock", stdlib.MakeClock())
 	return set
 }
 
