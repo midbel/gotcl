@@ -59,8 +59,9 @@ parray arr
 puts [array get arr]
 puts [array names arr]
 
-puts [info depth]
-puts [info count]
+puts [info tclversion]
+puts [info level]
+puts [info cmdcount]
 puts [info commands]
 puts [info hostname]
 puts [info nameofexecutable]

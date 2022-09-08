@@ -9,6 +9,13 @@ type Frame struct {
 	env      *env.Env
 	ns       *Namespace
 	deferred []stdlib.Executer
+
+	cmd  string
+	args []string
+}
+
+func (f *Frame) Names() []string {
+	return f.env.Names()
 }
 
 func (f *Frame) Define(n string, v env.Value) {

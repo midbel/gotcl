@@ -14,6 +14,8 @@ import (
 	"github.com/midbel/slices"
 )
 
+const Version = "0.0.1"
+
 type Interpreter struct {
 	last   env.Value
 	count  int
@@ -41,6 +43,20 @@ func defaultInterpreter(name string, safe bool) *Interpreter {
 	}
 	i.push(GlobalNS())
 	return &i
+}
+
+func (i *Interpreter) Version() string {
+	return Version
+}
+
+func (i *Interpreter) Globals(pat string) []string {
+	list := i.rootFrame().Names()
+	return glob.Filter(list, pat)
+}
+
+func (i *Interpreter) Locals(pat string) []string {
+	list := i.currentFrame().Names()
+	return glob.Filter(list, pat)
 }
 
 func (i *Interpreter) RegisterNS(name, body string) error {
@@ -304,6 +320,14 @@ func (i *Interpreter) ExecuteLevel(r io.Reader, level int, abs bool) (env.Value,
 	return i.Execute(r)
 }
 
+func (i Interpreter) IsComplete(cmd string) bool {
+	return false
+}
+
+func (i *Interpreter) Current(level int) (string, []string, error) {
+	return "", nil, nil
+}
+
 func (i *Interpreter) Execute(r io.Reader) (env.Value, error) {
 	if i.currentNS().Root() && i.count == 0 {
 		defer i.executeDefer()
@@ -324,9 +348,6 @@ func (i *Interpreter) Execute(r io.Reader) (env.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		// if i.last != nil {
-		// 	fmt.Fprintln(i.Out, ">> ", i.last)
-		// }
 	}
 	return i.last, nil
 }

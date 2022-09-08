@@ -18,7 +18,9 @@ var (
 
 type Interpreter interface {
 	Execute(io.Reader) (env.Value, error)
+	IsComplete(string) bool
 	IsSafe() bool
+	Version() string
 
 	Resolve(string) (env.Value, error)
 	Define(string, env.Value)

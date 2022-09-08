@@ -17,6 +17,14 @@ func EmptyEnv() *Env {
 	}
 }
 
+func (e *Env) Names() []string {
+	var list []string
+	for k := range e.values {
+		list = append(list, k)
+	}
+	return list
+}
+
 func (e *Env) Delete(n string) {
 	delete(e.values, n)
 }
