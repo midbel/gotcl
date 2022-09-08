@@ -62,6 +62,13 @@ func (e Ensemble) Execute(i Interpreter, args []env.Value) (env.Value, error) {
 	return e.List[x].Execute(i, slices.Rest(args))
 }
 
+func sortEnsembleCommands(e Ensemble) Ensemble {
+	sort.Slice(e.List, func(i, j int) bool {
+		return e.List[i].GetName() < e.List[j].GetName()
+	})
+	return e
+}
+
 type Builtin struct {
 	Name     string
 	Usage    string

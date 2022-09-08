@@ -2,7 +2,6 @@ package stdlib
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/midbel/gotcl/env"
@@ -17,70 +16,26 @@ func MakeArray() Executer {
 			Builtin{
 				Name:  "set",
 				Arity: 2,
-				Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-					arr, err := i.Resolve(slices.Fst(args).String())
-					if err != nil {
-						arr = env.EmptyArr()
-					}
-					list, err := scan(slices.Snd(args).String())
-					if err != nil {
-						return nil, err
-					}
-					if len(list)%2 != 0 {
-						return nil, fmt.Errorf("invalid length")
-					}
-					s := arr.(env.Array)
-					for i := 0; i < len(list); i += 2 {
-						s.Set(list[i], env.Str(list[i+1]))
-					}
-					i.Define(slices.Fst(args).String(), s)
-					return nil, nil
-				},
+				Run: arraySet,
 			},
 			Builtin{
 				Name:  "get",
 				Arity: 1,
-				Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-					arr, err := i.Resolve(slices.Fst(args).String())
-					if err != nil {
-						return nil, err
-					}
-					arr, err = arr.ToArray()
-					if err != nil {
-						return nil, err
-					}
-					return arr.(env.Array).Pairs(), nil
-				},
+				Run: arrayGet,
 			},
 			Builtin{
 				Name:  "names",
 				Arity: 1,
-				Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-					arr, err := i.Resolve(slices.Fst(args).String())
-					if err != nil {
-						return nil, err
-					}
-					arr, err = arr.ToArray()
-					if err != nil {
-						return nil, err
-					}
-					list := arr.(env.Array).Names()
-					return env.ListFromStrings(list), nil
-				},
+				Run: arrayNames,
 			},
 			Builtin{
 				Name:  "size",
 				Arity: 1,
-				Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-					return nil, nil
-				},
+				Run: arraySize,
 			},
 		},
 	}
-	sort.Slice(e.List, func(i, j int) bool {
-		return e.List[i].GetName() < e.List[j].GetName()
-	})
-	return e
+	return sortEnsembleCommands(e)
 }
 
 func PrintArray() Executer {
@@ -109,6 +64,63 @@ func PrintArray() Executer {
 			return nil, nil
 		},
 	}
+}
+
+func arrayNames(i Interpreter, args []env.Value) (env.Value, error) {
+	arr, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	arr, err = arr.ToArray()
+	if err != nil {
+		return nil, err
+	}
+	list := arr.(env.Array).Names()
+	return env.ListFromStrings(list), nil
+}
+
+func arraySize(i Interpreter, args []env.Value) (env.Value, error) {
+	arr, err := slices.Fst(args).ToArray()
+	if err != nil {
+		return nil, err
+	}
+	z, ok := arr.( interface { Len() int })
+	if !ok {
+		return nil, fmt.Errorf("%s is not an array", slices.Fst(args))
+	}
+	return env.Int(int64(z.Len())), nil
+}
+
+func arrayGet(i Interpreter, args []env.Value) (env.Value, error) {
+	arr, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	arr, err = arr.ToArray()
+	if err != nil {
+		return nil, err
+	}
+	return arr.(env.Array).Pairs(), nil
+}
+
+func arraySet(i Interpreter, args []env.Value) (env.Value, error) {
+	arr, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		arr = env.EmptyArr()
+	}
+	list, err := scan(slices.Snd(args).String())
+	if err != nil {
+		return nil, err
+	}
+	if len(list)%2 != 0 {
+		return nil, fmt.Errorf("invalid length")
+	}
+	s := arr.(env.Array)
+	for i := 0; i < len(list); i += 2 {
+		s.Set(list[i], env.Str(list[i+1]))
+	}
+	i.Define(slices.Fst(args).String(), s)
+	return nil, nil
 }
 
 func scan(str string) ([]string, error) {

@@ -2,7 +2,6 @@ package stdlib
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/slices"
@@ -34,10 +33,7 @@ func MakeNamespace() Executer {
 			},
 		},
 	}
-	sort.Slice(e.List, func(i, j int) bool {
-		return e.List[i].GetName() < e.List[j].GetName()
-	})
-	return e
+	return sortEnsembleCommands(e)
 }
 
 func namespaceCreate(i NamespaceHandler, args []env.Value) (env.Value, error) {

@@ -2,7 +2,6 @@ package stdlib
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/midbel/gotcl/env"
@@ -59,10 +58,7 @@ func MakeInterp() Executer {
 			},
 		},
 	}
-	sort.Slice(e.List, func(i, j int) bool {
-		return e.List[i].GetName() < e.List[j].GetName()
-	})
-	return e
+	return sortEnsembleCommands(e)
 }
 
 func interpCreate(i InterpHandler, args []env.Value) (env.Value, error) {

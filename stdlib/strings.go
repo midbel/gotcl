@@ -1,7 +1,6 @@
 package stdlib
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 
@@ -51,10 +50,7 @@ func MakeString() Executer {
 			},
 		},
 	}
-	sort.Slice(e.List, func(i, j int) bool {
-		return e.List[i].GetName() < e.List[j].GetName()
-	})
-	return e
+	return sortEnsembleCommands(e)
 }
 
 func withString(v env.Value, do func(str string) string) (env.Value, error) {
