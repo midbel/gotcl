@@ -31,18 +31,20 @@ func RunPuts() Executer {
 				Check:    CheckString,
 			},
 		},
-		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			ch, err := i.Resolve("channel")
-			if err != nil {
-				return nil, err
-			}
-			ph, ok := i.(PrintHandler)
-			if !ok {
-				return nil, fmt.Errorf("interpreter can not print message to channel")
-			}
-			nonl, _ := i.Resolve("nonewline")
-			err = ph.Print(ch.String(), slices.Fst(args).String(), !env.ToBool(nonl))
-			return env.EmptyStr(), err
-		},
+		Run: runPuts,
 	}
+}
+
+func runPuts(i Interpreter, args []env.Value) (env.Value, error) {
+	ch, err := i.Resolve("channel")
+	if err != nil {
+		return nil, err
+	}
+	ph, ok := i.(PrintHandler)
+	if !ok {
+		return nil, fmt.Errorf("interpreter can not print message to channel")
+	}
+	nonl, _ := i.Resolve("nonewline")
+	err = ph.Print(ch.String(), slices.Fst(args).String(), !env.ToBool(nonl))
+	return env.EmptyStr(), err
 }

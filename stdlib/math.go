@@ -10,18 +10,20 @@ func RunIncr() Executer {
 		Name:  "incr",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			v, err := i.Resolve(slices.Fst(args).String())
-			if err != nil {
-				return nil, err
-			}
-			n, err := env.ToInt(v)
-			if err != nil {
-				return nil, err
-			}
-			res := env.Int(int64(n) + 1)
-			i.Define(slices.Fst(args).String(), res)
-			return res, nil
-		},
+		Run: runIncr,
 	}
+}
+
+func runIncr(i Interpreter, args []env.Value) (env.Value, error) {
+	v, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	n, err := env.ToInt(v)
+	if err != nil {
+		return nil, err
+	}
+	res := env.Int(int64(n) + 1)
+	i.Define(slices.Fst(args).String(), res)
+	return res, nil
 }

@@ -10,10 +10,7 @@ func RunSet() Executer {
 		Name:  "set",
 		Arity: 2,
 		Safe:  true,
-		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			i.Define(slices.Fst(args).String(), slices.Snd(args))
-			return slices.Snd(args), nil
-		},
+		Run: runSet,
 	}
 }
 
@@ -30,9 +27,16 @@ func RunUnset() Executer {
 				Check: CheckBool,
 			},
 		},
-		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			i.Delete(slices.Fst(args).String())
-			return nil, nil
-		},
+		Run: runUnset,
 	}
+}
+
+func runSet(i Interpreter, args []env.Value) (env.Value, error) {
+	i.Define(slices.Fst(args).String(), slices.Snd(args))
+	return slices.Snd(args), nil
+}
+
+func runUnset(i Interpreter, args []env.Value) (env.Value, error) {
+	i.Delete(slices.Fst(args).String())
+	return nil, nil
 }
