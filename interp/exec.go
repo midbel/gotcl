@@ -43,6 +43,9 @@ func DefaultSet() CommandSet {
 	set.registerCmd("global", stdlib.RunGlobal())
 	set.registerCmd("time", stdlib.RunTime())
 	set.registerCmd("exit", stdlib.RunExit())
+	set.registerCmd("cd", stdlib.RunChdir())
+	set.registerCmd("pid", stdlib.RunPid())
+	set.registerCmd("pwd", stdlib.RunPwd())
 	return set
 }
 
