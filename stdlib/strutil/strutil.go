@@ -47,6 +47,27 @@ func Map(str string, list []string, nocase bool) (string, error) {
 	return str, nil
 }
 
+func ToLower(str string, fst, lst int) (string, error) {
+	if err := checkBoundary(str, fst, lst); err != nil {
+		return "", err
+	}
+	return strings.ToLower(str[fst:lst]), nil
+}
+
+func ToUpper(str string, fst, lst int) (string, error) {
+	if err := checkBoundary(str, fst, lst); err != nil {
+		return "", err
+	}
+	return strings.ToUpper(str[fst:lst]), nil
+}
+
+func ToTitle(str string, fst, lst int) (string, error) {
+	if err := checkBoundary(str, fst, lst); err != nil {
+		return "", err
+	}
+	return strings.ToTitle(str[fst:lst]), nil
+}
+
 func Replace(str, pat string, fst, lst int) (string, error) {
 	if err := checkBoundary(str, fst, lst); err != nil {
 		return "", err

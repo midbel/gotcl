@@ -304,7 +304,7 @@ func runLength(i Interpreter, args []string) (string, error) {
 	return strconv.Itoa(n), nil
 }
 
-func cutStr(str string, n int) string {
+func cutStr(str string, v env.Value) string {
 	if n > 0 && len(str) >= n {
 		str = str[:n]
 	}

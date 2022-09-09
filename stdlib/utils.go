@@ -52,7 +52,7 @@ func RunPwd() Executer {
 }
 
 func runChdir(i Interpreter, args []env.Value) (env.Value, error) {
-	dir = slices.Fst(args)
+	dir := slices.Fst(args)
 	if dir == nil {
 		d, err := os.UserHomeDir()
 		if err != nil {

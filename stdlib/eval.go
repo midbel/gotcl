@@ -108,7 +108,7 @@ func runExit(i Interpreter, args []env.Value) (env.Value, error) {
 	} else {
 		x, err := slices.Fst(args).ToNumber()
 		if err != nil {
-			return nil, errr
+			return nil, err
 		}
 		res = x
 	}
