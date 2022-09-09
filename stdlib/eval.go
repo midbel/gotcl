@@ -14,6 +14,10 @@ type DeferHandler interface {
 	RegisterDefer(string) error
 }
 
+type LinkHandler interface {
+	LinkVar(string, string, int) error
+}
+
 func RunDefer() Executer {
 	return Builtin{
 		Name:  "defer",
@@ -52,6 +56,16 @@ func RunUpvar() Executer {
 	}
 }
 
+func RunGlobal() Executer {
+	return Builtin{
+		Name:     "global",
+		Arity:    2,
+		Variadic: true,
+		Safe:     false,
+		Run:      runGlobal,
+	}
+}
+
 func RunEval() Executer {
 	return Builtin{
 		Name:     "eval",
@@ -60,6 +74,11 @@ func RunEval() Executer {
 		Safe:     false,
 		Run:      runEval,
 	}
+}
+
+func runEval(i Interpreter, args []env.Value) (env.Value, error) {
+	tmp := env.ListFrom(args...)
+	return i.Execute(strings.NewReader(tmp.String()))
 }
 
 func runDefer(i Interpreter, args []env.Value) (env.Value, error) {
@@ -108,6 +127,14 @@ func runUplevel(i Interpreter, args []env.Value) (env.Value, error) {
 	return n.ExecuteLevel(strings.NewReader(slices.Fst(args).String()), level, abs)
 }
 
+func runGlobal(i Interpreter, args []env.Value) (env.Value, error) {
+	k, ok := i.(LinkHandler)
+	if !ok {
+		return nil, fmt.Errorf("interpreter can not create link between variables")
+	}
+	return env.EmptyStr(), linkVars(k, args, 0)
+}
+
 func runUpvar(i Interpreter, args []env.Value) (env.Value, error) {
 	var level int
 	if n := len(args) % 2; n == 0 {
@@ -120,25 +147,22 @@ func runUpvar(i Interpreter, args []env.Value) (env.Value, error) {
 		level = x
 		args = slices.Rest(args)
 	}
-	k, ok := i.(interface {
-		LinkVar(string, string, int) error
-	})
+	k, ok := i.(LinkHandler)
 	if !ok {
 		return nil, fmt.Errorf("interpreter can not create link between variables")
 	}
+	return env.EmptyStr(), linkVars(k, args, level)
+}
+
+func linkVars(k LinkHandler, args []env.Value, level int) error {
 	for j := 0; j < len(args); j += 2 {
 		var (
 			src = slices.At(args, j)
 			dst = slices.At(args, j+1)
 		)
 		if err := k.LinkVar(src.String(), dst.String(), level); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return env.EmptyStr(), nil
-}
-
-func runEval(i Interpreter, args []env.Value) (env.Value, error) {
-	tmp := env.ListFrom(args...)
-	return i.Execute(strings.NewReader(tmp.String()))
+	return nil
 }

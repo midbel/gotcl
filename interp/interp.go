@@ -222,6 +222,10 @@ func (i *Interpreter) Delete(n string) {
 	i.currentFrame().Delete(n)
 }
 
+func (i *Interpreter) Rename(prev, next string) error {
+	return i.currentNS().Rename(prev, next)
+}
+
 func (i *Interpreter) Resolve(n string) (env.Value, error) {
 	name := strings.Split(n, "::")
 	if len(name) == 1 {

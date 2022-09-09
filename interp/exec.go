@@ -38,6 +38,9 @@ func DefaultSet() CommandSet {
 	set.registerCmd("array", stdlib.MakeArray())
 	set.registerCmd("info", stdlib.MakeInfo())
 	set.registerCmd("clock", stdlib.MakeClock())
+	set.registerCmd("append", stdlib.RunAppend())
+	set.registerCmd("rename", stdlib.RunRename())
+	set.registerCmd("global", stdlib.RunGlobal())
 	return set
 }
 
@@ -49,8 +52,16 @@ func UtilSet() CommandSet {
 	return set
 }
 
-func (cs CommandSet) registerCmd(name string, exec stdlib.Executer) {
-	cs[name] = exec
+func (cs CommandSet) Rename(prev, next string) error {
+	e, ok := cs[prev]
+	if !ok {
+		return fmt.Errorf("%s: command not defined", prev)
+	}
+	delete(cs, prev)
+	if next != "" {
+		cs[next] = e
+	}
+	return nil
 }
 
 func (cs CommandSet) Procedures() []string {
@@ -90,6 +101,10 @@ func (cs CommandSet) Body(proc string) (string, error) {
 		return "", fmt.Errorf("%s is not a procedure", proc)
 	}
 	return p.Body, nil
+}
+
+func (cs CommandSet) registerCmd(name string, exec stdlib.Executer) {
+	cs[name] = exec
 }
 
 type procedure struct {
