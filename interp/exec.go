@@ -41,6 +41,8 @@ func DefaultSet() CommandSet {
 	set.registerCmd("append", stdlib.RunAppend())
 	set.registerCmd("rename", stdlib.RunRename())
 	set.registerCmd("global", stdlib.RunGlobal())
+	set.registerCmd("time", stdlib.RunTime())
+	set.registerCmd("exit", stdlib.RunExit())
 	return set
 }
 

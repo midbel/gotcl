@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/slices"
@@ -74,6 +75,44 @@ func RunEval() Executer {
 		Safe:     false,
 		Run:      runEval,
 	}
+}
+
+func RunTime() Executer {
+	return Builtin{
+		Name:  "time",
+		Arity: 1,
+		Run:   runTime,
+	}
+}
+
+func RunExit() Executer {
+	return Builtin{
+		Name:  "exit",
+		Arity: 1,
+		Run:   runExit,
+	}
+}
+
+func runTime(i Interpreter, args []env.Value) (env.Value, error) {
+	var (
+		now    = time.Now()
+		_, err = i.Execute(strings.NewReader(slices.Fst(args).String()))
+	)
+	return env.Str(time.Since(now).String()), err
+}
+
+func runExit(i Interpreter, args []env.Value) (env.Value, error) {
+	var res env.Value
+	if len(args) == 0 {
+		res = env.Zero()
+	} else {
+		x, err := slices.Fst(args).ToNumber()
+		if err != nil {
+			return nil, errr
+		}
+		res = x
+	}
+	return res, ErrExit
 }
 
 func runEval(i Interpreter, args []env.Value) (env.Value, error) {
