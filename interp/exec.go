@@ -34,6 +34,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("uplevel", stdlib.RunUplevel())
 	set.registerCmd("incr", stdlib.RunIncr())
 	set.registerCmd("namespace", stdlib.MakeNamespace())
+	set.registerCmd("variable", stdlib.RunVariable())
 	set.registerCmd("parray", stdlib.PrintArray())
 	set.registerCmd("array", stdlib.MakeArray())
 	set.registerCmd("info", stdlib.MakeInfo())
