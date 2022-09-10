@@ -1,12 +1,15 @@
 package stdlib
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
 	"github.com/midbel/gotcl/env"
+	"github.com/midbel/gotcl/expr"
+	"github.com/midbel/gotcl/expr/types"
 	"github.com/midbel/slices"
 )
 
@@ -87,10 +90,195 @@ func RunTime() Executer {
 
 func RunExit() Executer {
 	return Builtin{
-		Name:  "exit",
-		Arity: 1,
-		Run:   runExit,
+		Name:     "exit",
+		Arity:    0,
+		Variadic: true,
+		Run:      runExit,
 	}
+}
+
+func RunReturn() Executer {
+	return Builtin{
+		Name: "return",
+		// Safe: true,
+		// Run: runReturn,
+	}
+}
+
+func RunUnknown() Executer {
+	return Builtin{
+		Name: "unknown",
+		// Safe: true,
+		// Run: runUnknown,
+	}
+}
+
+func RunExpr() Executer {
+	return Builtin{
+		Name:     "expr",
+		Variadic: true,
+		Safe:     true,
+		Run:      runExpr,
+	}
+}
+
+func RunContinue() Executer {
+	return Builtin{
+		Name: "continue",
+		Safe: true,
+		Run:  runContinue,
+	}
+}
+
+func RunBreak() Executer {
+	return Builtin{
+		Name: "break",
+		Safe: true,
+		Run:  runBreak,
+	}
+}
+
+func RunFor() Executer {
+	return Builtin{
+		Name:  "for",
+		Arity: 4,
+		Safe:  true,
+		Run:   runFor,
+	}
+}
+
+func RunWhile() Executer {
+	return Builtin{
+		Name:  "while",
+		Arity: 2,
+		Safe:  true,
+		Run:   runFor,
+	}
+}
+
+func RunSwitch() Executer {
+	return Builtin{
+		Name:  "switch",
+		Arity: 2,
+		Safe:  true,
+		Options: []Option{
+			{
+				Name:  "exact",
+				Flag:  true,
+				Value: env.False(),
+				Check: CheckBool,
+			},
+			{
+				Name:  "glob",
+				Flag:  true,
+				Value: env.False(),
+				Check: CheckBool,
+			},
+			{
+				Name:  "nocase",
+				Flag:  true,
+				Value: env.False(),
+				Check: CheckBool,
+			},
+		},
+		Run: runSwitch,
+	}
+}
+
+func RunIf() Executer {
+	return Builtin{
+		Name:     "if",
+		Arity:    2,
+		Variadic: true,
+		Safe:     true,
+		Run:      runIf,
+	}
+}
+
+func RunError() Executer {
+	return Builtin{
+		Name: "error",
+	}
+}
+
+func RunCatch() Executer {
+	return Builtin{
+		Name: "catch",
+	}
+}
+
+func RunThrow() Executer {
+	return Builtin{
+		Name: "throw",
+	}
+}
+
+func RunTry() Executer {
+	return Builtin{
+		Name: "try",
+	}
+}
+
+func runIf(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runSwitch(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runFor(i Interpreter, args []env.Value) (env.Value, error) {
+	_, err := i.Execute(strings.NewReader(slices.Fst(args).String()))
+	if err != nil {
+		return nil, err
+	}
+	return runLoop(i, slices.Snd(args), slices.Lst(args), slices.At(args, 2))
+}
+
+func runWhile(i Interpreter, args []env.Value) (env.Value, error) {
+	return runLoop(i, slices.Fst(args), slices.Lst(args), nil)
+}
+
+func runBreak(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, ErrBreak
+}
+
+func runContinue(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, ErrContinue
+}
+
+func runExpr(i Interpreter, args []env.Value) (env.Value, error) {
+	var str strings.Builder
+	for i := range args {
+		str.WriteString(args[i].String())
+	}
+	p, err := expr.Parse(str.String())
+	if err != nil {
+		return nil, err
+	}
+	expr, err := p.Parse()
+	if err != nil {
+		return nil, err
+	}
+	res, err := expr.Eval(i)
+	if err != nil {
+		return nil, err
+	}
+	var val env.Value
+	switch res.(type) {
+	case types.Boolean:
+		b, _ := types.AsBool(res)
+		val = env.Bool(b)
+	case types.Integer:
+		i, _ := types.AsInt(res)
+		val = env.Int(i)
+	case types.Real:
+		f, _ := types.AsFloat(res)
+		val = env.Float(f)
+	default:
+		return env.Str(res.String()), nil
+	}
+	return val, nil
 }
 
 func runTime(i Interpreter, args []env.Value) (env.Value, error) {
@@ -204,4 +392,32 @@ func linkVars(k LinkHandler, args []env.Value, level int) error {
 		}
 	}
 	return nil
+}
+
+func runLoop(i Interpreter, cdt, body, next env.Value) (env.Value, error) {
+	var res env.Value
+	for {
+		b, err := i.Execute(strings.NewReader(cdt.String()))
+		if err != nil {
+			return nil, err
+		}
+		if !env.ToBool(b) {
+			break
+		}
+		res, err = i.Execute(strings.NewReader(body.String()))
+		if err != nil && !errors.Is(err, ErrContinue) {
+			if errors.Is(err, ErrBreak) {
+				err = nil
+			}
+			return nil, err
+		}
+		if next == nil {
+			continue
+		}
+		_, err = i.Execute(strings.NewReader(next.String()))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }

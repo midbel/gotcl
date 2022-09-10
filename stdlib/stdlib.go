@@ -14,6 +14,9 @@ import (
 var (
 	ErrArgument = errors.New("wrong number of argument given")
 	ErrExit     = errors.New("exit")
+	ErrReturn   = errors.New("return")
+	ErrBreak    = errors.New("break")
+	ErrContinue = errors.New("continue")
 )
 
 type Interpreter interface {

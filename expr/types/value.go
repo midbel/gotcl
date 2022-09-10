@@ -3,7 +3,8 @@ package types
 import (
 	"errors"
 	"fmt"
-	"strconv"
+
+	"github.com/midbel/gotcl/env"
 )
 
 type Value interface {
@@ -57,18 +58,27 @@ func AsFloat(v Value) (float64, error) {
 	}
 }
 
-func AsValue(str string) (Value, error) {
-	if v, err := strconv.ParseInt(str, 0, 64); err == nil {
-		return IntValue(v), nil
+func AsValue(str env.Value) (Value, error) {
+	var val Value
+	switch e := str.(type) {
+	case env.Boolean:
+		val = BoolValue(env.ToBool(e))
+	case env.Number:
+		n, err := env.ToFloat(e)
+		if err != nil {
+			return nil, err
+		}
+		val = RealValue(n)
+	case env.String:
+		n, err := str.ToNumber()
+		if err != nil {
+			return nil, err
+		}
+		return AsValue(n)
+	default:
+		return nil, fmt.Errorf("%s can not be converted to Value", str)
 	}
-	if f, err := strconv.ParseFloat(str, 64); err == nil {
-		return RealValue(f), nil
-	}
-
-	if b, err := strconv.ParseBool(str); err == nil {
-		return BoolValue(b), nil
-	}
-	return nil, fmt.Errorf("%s can not be converted to Value")
+	return val, nil
 }
 
 func AsInt(v Value) (int64, error) {

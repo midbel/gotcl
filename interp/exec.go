@@ -47,6 +47,19 @@ func DefaultSet() CommandSet {
 	set.registerCmd("cd", stdlib.RunChdir())
 	set.registerCmd("pid", stdlib.RunPid())
 	set.registerCmd("pwd", stdlib.RunPwd())
+	set.registerCmd("try", stdlib.RunTry())
+	set.registerCmd("throw", stdlib.RunThrow())
+	set.registerCmd("error", stdlib.RunError())
+	set.registerCmd("catch", stdlib.RunCatch())
+	set.registerCmd("if", stdlib.RunIf())
+	set.registerCmd("switch", stdlib.RunSwitch())
+	set.registerCmd("for", stdlib.RunFor())
+	set.registerCmd("while", stdlib.RunWhile())
+	set.registerCmd("break", stdlib.RunBreak())
+	set.registerCmd("continue", stdlib.RunContinue())
+	set.registerCmd("expr", stdlib.RunExpr())
+	set.registerCmd("unknown", stdlib.RunUnknown())
+	set.registerCmd("return", stdlib.RunReturn())
 	return set
 }
 

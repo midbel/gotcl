@@ -6,8 +6,12 @@ import (
 	"github.com/midbel/gotcl/word"
 )
 
+type Env interface {
+	Resolve(string) (env.Value, error)
+}
+
 type Expression interface {
-	Eval(env.Environment) (types.Value, error)
+	Eval(Env) (types.Value, error)
 }
 
 type Choice struct {
@@ -16,7 +20,7 @@ type Choice struct {
 	Alt Expression
 }
 
-func (c Choice) Eval(env env.Environment) (types.Value, error) {
+func (c Choice) Eval(env Env) (types.Value, error) {
 	res, err := c.Cdt.Eval(env)
 	if err != nil {
 		return nil, err
@@ -37,7 +41,7 @@ type Number struct {
 	types.Value
 }
 
-func (n Number) Eval(_ env.Environment) (types.Value, error) {
+func (n Number) Eval(_ Env) (types.Value, error) {
 	return n.Value, nil
 }
 
@@ -45,7 +49,7 @@ type Identifier struct {
 	Value string
 }
 
-func (i Identifier) Eval(env env.Environment) (types.Value, error) {
+func (i Identifier) Eval(env Env) (types.Value, error) {
 	str, err := env.Resolve(i.Value)
 	if err != nil {
 		return nil, err
@@ -58,7 +62,7 @@ type Prefix struct {
 	Right Expression
 }
 
-func (p Prefix) Eval(env env.Environment) (types.Value, error) {
+func (p Prefix) Eval(env Env) (types.Value, error) {
 	v, err := p.Right.Eval(env)
 	if err != nil {
 		return nil, err
@@ -81,7 +85,7 @@ type Infix struct {
 	Op    rune
 }
 
-func (i Infix) Eval(env env.Environment) (types.Value, error) {
+func (i Infix) Eval(env Env) (types.Value, error) {
 	left, err := i.Left.Eval(env)
 	if err != nil {
 		return nil, err
