@@ -224,3 +224,12 @@ func IsSet(list []Option, name string) (int, error) {
 	}
 	return 0, fmt.Errorf("%s: option not supported", name)
 }
+
+func hasError(es ...error) error {
+	for i := range es {
+		if es[i] != nil {
+			return es[i]
+		}
+	}
+	return nil
+}

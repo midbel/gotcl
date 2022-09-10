@@ -80,16 +80,26 @@ func MakeString() Executer {
 				Run: stringCompare,
 			},
 			Builtin{
-				Name: "first",
+				Name:     "first",
+				Arity:    2,
+				Variadic: true,
+				Run:      stringLast,
 			},
 			Builtin{
-				Name: "last",
+				Name:     "last",
+				Arity:    2,
+				Variadic: true,
+				Run:      stringLast,
 			},
 			Builtin{
-				Name: "index",
+				Name:  "index",
+				Arity: 2,
+				Run:   stringIndex,
 			},
 			Builtin{
-				Name: "range",
+				Name:  "range",
+				Arity: 3,
+				Run:   stringRange,
 			},
 			Builtin{
 				Name:  "map",
@@ -285,6 +295,66 @@ func stringToTitle(i Interpreter, args []env.Value) (env.Value, error) {
 		res = env.Str(str)
 	}
 	return res, nil
+}
+
+func stringRange(i Interpreter, args []env.Value) (env.Value, error) {
+	var (
+		fst, err1 = env.ToInt(slices.At(args, 1))
+		lst, err2 = env.ToInt(slices.At(args, 2))
+	)
+	if err := hasError(err1, err2); err != nil {
+		return nil, err
+	}
+	res, err := strutil.Range(slices.Fst(args).String(), fst, lst)
+	return env.Str(res), err
+}
+
+func stringFirst(i Interpreter, args []env.Value) (env.Value, error) {
+	var (
+		str = slices.Fst(args).String()
+		pat = slices.Snd(args).String()
+		ix  int
+	)
+	if v := slices.Lst(args); v != nil {
+		x, err := env.ToInt(v)
+		if err != nil {
+			return nil, err
+		}
+		ix = x
+	}
+	ix = strings.Index(str[ix:], pat)
+	return env.Int(int64(ix)), nil
+}
+
+func stringLast(i Interpreter, args []env.Value) (env.Value, error) {
+	var (
+		str = slices.Fst(args).String()
+		pat = slices.Snd(args).String()
+		ix  int
+	)
+	if v := slices.Lst(args); v != nil {
+		x, err := env.ToInt(v)
+		if err != nil {
+			return nil, err
+		}
+		ix = x
+	}
+	ix = strings.LastIndex(str[ix:], pat)
+	return env.Int(int64(ix)), nil
+}
+
+func stringIndex(i Interpreter, args []env.Value) (env.Value, error) {
+	var (
+		str     = slices.Fst(args).String()
+		ix, err = env.ToInt(slices.Snd(args))
+	)
+	if err != nil {
+		return nil, err
+	}
+	if ix > len(str) {
+		return env.EmptyStr(), nil
+	}
+	return env.Str(str[ix : ix+1]), nil
 }
 
 func stringTrim(i Interpreter, args []env.Value) (env.Value, error) {
