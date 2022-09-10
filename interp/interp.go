@@ -67,13 +67,58 @@ func (i *Interpreter) RegisterNS(name, body string) error {
 	i.push(ns)
 	defer i.pop()
 
-	// body = strings.TrimSpace(body)
 	_, err := i.Execute(strings.NewReader(body))
 	return err
 }
 
 func (i *Interpreter) UnregisterNS(name string) error {
 	return nil
+}
+
+func (i *Interpreter) DefineVar(name string, v env.Value) {
+
+}
+
+func (i *Interpreter) CurrentNS() string {
+	return i.currentNS().GetName()
+}
+
+func (i *Interpreter) ParentNS(n string) (string, error) {
+	var (
+		name    = strings.Split(n, "::")
+		ns, err = i.rootNS().LookupNS(name)
+	)
+	if err != nil {
+		return "", err
+	}
+	ns = ns.Parent()
+	if ns == nil {
+		return "", nil
+	}
+	return ns.FQN(), nil
+}
+
+func (i *Interpreter) ChildreNS(n string) ([]string, error) {
+	var (
+		name    = strings.Split(n, "::")
+		ns, err = i.rootNS().LookupNS(name)
+	)
+	if err != nil {
+		return nil, err
+	}
+	var list []string
+	for _, i := range ns.Children() {
+		list = append(list, i.GetName())
+	}
+	return list, nil
+}
+
+func (i *Interpreter) HasNS(n string) bool {
+	var (
+		name   = strings.Split(n, "::")
+		_, err = i.rootNS().LookupNS(name)
+	)
+	return err == nil
 }
 
 func (i *Interpreter) LinkVar(src, dst string, level int) error {

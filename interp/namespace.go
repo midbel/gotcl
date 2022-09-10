@@ -146,6 +146,14 @@ func (n *Namespace) Root() bool {
 	return n.parent == nil
 }
 
+func (n *Namespace) Parent() *Namespace {
+	return n.parent
+}
+
+func (n *Namespace) Children() []*Namespace {
+	return n.children
+}
+
 func (n *Namespace) FQN() string {
 	if n.Root() {
 		return "::"
