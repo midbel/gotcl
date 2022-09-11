@@ -30,8 +30,18 @@ type Interpreter interface {
 	Delete(string)
 }
 
+const (
+	ReturnOk int = iota
+	ReturnErr
+	ReturnRet
+	ReturnBreak
+	ReturnContinue
+)
+
 type Return struct {
-	Code int
+	env.Value
+	Code  int
+	Level int
 }
 
 type CommandFunc func(Interpreter, []env.Value) (env.Value, error)
@@ -147,10 +157,11 @@ func (b Builtin) parseOptions(i Interpreter, args []env.Value) ([]env.Value, err
 			continue
 		}
 		if check := b.Options[x].Check; check != nil {
-			if err := check(args[j+1]); err != nil {
+			val, err := check(args[j+1])
+			if err != nil {
 				return nil, err
 			}
-			b.Options[j].Value = args[j+1]
+			b.Options[j].Value = val
 			i.Define(str, b.Options[j].Value)
 		}
 		j++
@@ -163,7 +174,7 @@ func (b Builtin) parseOptions(i Interpreter, args []env.Value) ([]env.Value, err
 
 var ErrType = errors.New("invalid type given")
 
-type CheckFunc func(env.Value) error
+type CheckFunc func(env.Value) (env.Value, error)
 
 type Option struct {
 	env.Value
@@ -174,38 +185,57 @@ type Option struct {
 	Check    CheckFunc
 }
 
-func CheckBool(v env.Value) error {
+func CheckBool(v env.Value) (env.Value, error) {
 	_, ok := v.(env.Boolean)
 	if !ok {
-		return ErrType
+		return nil, ErrType
 	}
-	return nil
+	return v, nil
 }
 
-func CheckNumber(v env.Value) error {
+func CheckNumber(v env.Value) (env.Value, error) {
 	_, ok := v.(env.Number)
 	if !ok {
-		return ErrType
+		return nil, ErrType
 	}
-	return nil
+	return v, nil
 }
 
-func CheckString(v env.Value) error {
+func CheckString(v env.Value) (env.Value, error) {
 	_, ok := v.(env.String)
 	if !ok {
-		return ErrType
+		return nil, ErrType
 	}
-	return nil
+	return v, nil
+}
+
+func OneOf(cs ...CheckFunc) CheckFunc {
+	return func(v env.Value) (env.Value, error) {
+		var (
+			val env.Value
+			err error
+		)
+		for i := range cs {
+			if val, err = cs[i](v); err == nil {
+				break
+			}
+		}
+		return val, err
+	}
 }
 
 func CombineCheck(cs ...CheckFunc) CheckFunc {
-	return func(v env.Value) error {
+	return func(v env.Value) (env.Value, error) {
+		var (
+			val env.Value
+			err error
+		)
 		for i := range cs {
-			if err := cs[i](v); err != nil {
-				return err
+			if val, err = cs[i](v); err != nil {
+				return nil, err
 			}
 		}
-		return nil
+		return val, nil
 	}
 }
 

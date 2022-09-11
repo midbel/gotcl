@@ -109,6 +109,11 @@ func RunReturn() Executer {
 				Value: env.Zero(),
 				Check: CheckNumber,
 			},
+			{
+				Name:  "level",
+				Value: env.Int(1),
+				Check: CheckNumber,
+			},
 		},
 		Run: runReturn,
 	}
