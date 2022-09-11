@@ -116,8 +116,10 @@ func RunReturn() Executer {
 func RunUnknown() Executer {
 	return Builtin{
 		Name: "unknown",
-		// Safe: true,
-		// Run: runUnknown,
+		Safe: true,
+		Arity: 1,
+		Variadic: true,
+		Run: runUnknown,
 	}
 }
 
@@ -225,6 +227,15 @@ func RunTry() Executer {
 	return Builtin{
 		Name: "try",
 	}
+}
+
+func runUnknown(i Interpreter, args []env.Value) (env.Value, error) {
+	uh, ok := i.(interface{ RegisterUnknown(string, []env.Value) error })
+	if !ok {
+		return nil, fmt.Errorf("interpreter can not register unknown handler")
+	}
+	err := uh.RegisterUnknown(slices.Fst(args).String(), slices.Rest(args))
+	return nil, err
 }
 
 func runIf(i Interpreter, args []env.Value) (env.Value, error) {
