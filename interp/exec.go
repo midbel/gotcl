@@ -60,6 +60,14 @@ func DefaultSet() CommandSet {
 	set.registerCmd("expr", stdlib.RunExpr())
 	set.registerCmd("unknown", stdlib.RunUnknown())
 	set.registerCmd("return", stdlib.RunReturn())
+	set.registerCmd("open", stdlib.RunOpen())
+	set.registerCmd("close", stdlib.RunClose())
+	set.registerCmd("eof", stdlib.RunEof())
+	set.registerCmd("seek", stdlib.RunSeek())
+	set.registerCmd("tell", stdlib.RunTell())
+	set.registerCmd("gets", stdlib.RunGets())
+	set.registerCmd("read", stdlib.RunRead())
+	set.registerCmd("chan", stdlib.MakeChan())
 	return set
 }
 
