@@ -387,6 +387,9 @@ func (i *Interpreter) execute(c *Command) (env.Value, error) {
 		ns    *Namespace
 		err   error
 	)
+	if slices.Fst(parts) == "" {
+		parts = slices.Rest(parts)
+	}
 	if n := len(parts); n > 1 {
 		ns, err = i.currentNS().LookupNS(slices.Slice(parts))
 	} else {

@@ -43,13 +43,14 @@ func GlobalNS() *Namespace {
 
 	var (
 		mathfunc = createNS("mathfunc", MathfuncSet())
-		mathop   = createNS("mathop", MathfuncSet())
+		mathop   = createNS("mathop", MathopSet())
+		utils    = UtilNS()
 		tcl      = emptyNS("tcl")
 	)
 	tcl.RegisterNS(mathfunc)
 	tcl.RegisterNS(mathop)
 	ns.RegisterNS(tcl)
-	ns.RegisterNS(UtilNS())
+	ns.RegisterNS(utils)
 	return ns
 }
 
