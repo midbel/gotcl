@@ -33,6 +33,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("upvar", stdlib.RunUpvar())
 	set.registerCmd("uplevel", stdlib.RunUplevel())
 	set.registerCmd("incr", stdlib.RunIncr())
+	set.registerCmd("decr", stdlib.RunDecr())
 	set.registerCmd("namespace", stdlib.MakeNamespace())
 	set.registerCmd("variable", stdlib.RunVariable())
 	set.registerCmd("parray", stdlib.PrintArray())
@@ -76,6 +77,29 @@ func UtilSet() CommandSet {
 	set.registerCmd("defer", stdlib.RunDefer())
 	set.registerCmd("typeof", stdlib.RunTypeOf())
 	set.registerCmd("help", stdlib.RunHelp())
+	return set
+}
+
+func MathfuncSet() CommandSet {
+	set := EmptySet()
+	return set
+}
+
+func MathopSet() CommandSet {
+	set := EmptySet()
+	set.registerCmd("+", stdlib.RunAdd())
+	set.registerCmd("-", stdlib.RunSub())
+	set.registerCmd("*", stdlib.RunMul())
+	set.registerCmd("/", stdlib.RunDiv())
+	set.registerCmd("%", stdlib.RunMod())
+	set.registerCmd("**", stdlib.RunPow())
+	set.registerCmd("==", stdlib.RunEq())
+	set.registerCmd("!=", stdlib.RunNe())
+	set.registerCmd("<", stdlib.RunLt())
+	set.registerCmd("<=", stdlib.RunLe())
+	set.registerCmd(">", stdlib.RunGt())
+	set.registerCmd(">=", stdlib.RunGe())
+	set.registerCmd("!", stdlib.RunNot())
 	return set
 }
 

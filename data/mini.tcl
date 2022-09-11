@@ -68,3 +68,5 @@ puts [info nameofexecutable]
 puts [info procs]
 puts [info args greet]
 puts [info body greet]
+
+puts [::tcl::mathop::/ 7]
