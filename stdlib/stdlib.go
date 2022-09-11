@@ -144,7 +144,10 @@ func (b Builtin) parseOptions(i Interpreter, args []env.Value) ([]env.Value, err
 	var j int
 	for ; j < len(args) && j < len(b.Options); j++ {
 		str := args[j].String()
-		if str == "--" || !strings.HasPrefix(str, "-") {
+		if _, ok := args[j].(env.String); !ok || str == "--" || !strings.HasPrefix(str, "-") {
+			if str == "--" {
+				j++
+			}
 			break
 		}
 		str = strings.TrimPrefix(str, "-")

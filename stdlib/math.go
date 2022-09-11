@@ -157,6 +157,130 @@ func RunGe() Executer {
 	}
 }
 
+func RunAbs() Executer {
+	return Builtin{}
+}
+
+func RunAcos() Executer {
+	return Builtin{}
+}
+
+func RunAsin() Executer {
+	return Builtin{}
+}
+
+func RunAtan() Executer {
+	return Builtin{}
+}
+
+func RunAtan2() Executer {
+	return Builtin{}
+}
+
+func RunCos() Executer {
+	return Builtin{}
+}
+
+func RunCosh() Executer {
+	return Builtin{}
+}
+
+func RunSin() Executer {
+	return Builtin{}
+}
+
+func RunSinh() Executer {
+	return Builtin{}
+}
+
+func RunTan() Executer {
+	return Builtin{}
+}
+
+func RunTanh() Executer {
+	return Builtin{}
+}
+
+func RunHypot() Executer {
+	return Builtin{}
+}
+
+func RunBool() Executer {
+	return Builtin{}
+}
+
+func RunDouble() Executer {
+	return Builtin{}
+}
+
+func RunEntier() Executer {
+	return Builtin{}
+}
+
+func RunCeil() Executer {
+	return Builtin{}
+}
+
+func RunFloor() Executer {
+	return Builtin{}
+}
+
+func RunRound() Executer {
+	return Builtin{}
+}
+
+func RunFmod() Executer {
+	return Builtin{}
+}
+
+func RunInt() Executer {
+	return Builtin{}
+}
+
+func RunExp() Executer {
+	return Builtin{}
+}
+
+func RunLog() Executer {
+	return Builtin{}
+}
+
+func RunLog10() Executer {
+	return Builtin{}
+}
+
+func RunMax() Executer {
+	return Builtin{}
+}
+
+func RunMin() Executer {
+	return Builtin{}
+}
+
+func RunRaise() Executer {
+	return Builtin{}
+}
+
+func RunRand() Executer {
+	return Builtin{}
+}
+
+func RunSrand() Executer {
+	return Builtin{}
+}
+
+func RunIsqrt() Executer {
+	return Builtin{}
+}
+
+func RunSqrt() Executer {
+	return Builtin{}
+}
+
+func RunWide() Executer {
+	return Builtin{}
+}
+
 func runIncr(i Interpreter, args []env.Value) (env.Value, error) {
 	var step int
 	if v := slices.Snd(args); v != nil {
@@ -343,4 +467,128 @@ func withNumbers(args []env.Value, do func(float64, float64) (float64, error)) (
 		}
 	}
 	return env.Float(res), nil
+}
+
+func runAbs(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runAcos(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runAsin(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runAtan(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runAtan2(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runCos(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runCosh(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runSin(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runSinh(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runTan(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runTanh(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runHypot(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runBool(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runDouble(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runEntier(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runCeil(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runFloor(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runRound(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runFmod(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runInt(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runExp(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runLog(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runLog10(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runMax(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runMin(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runRaise(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runRand(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runSrand(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runIsqrt(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runSqrt(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runWide(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
 }
