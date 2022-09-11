@@ -101,8 +101,15 @@ func RunExit() Executer {
 func RunReturn() Executer {
 	return Builtin{
 		Name: "return",
-		// Safe: true,
-		// Run: runReturn,
+		Safe: true,
+		Options: []Option{
+			{
+				Name:  "code",
+				Value: env.Zero(),
+				Check: CheckNumber,
+			},
+		},
+		Run: runReturn,
 	}
 }
 
@@ -298,6 +305,10 @@ func runFor(i Interpreter, args []env.Value) (env.Value, error) {
 
 func runWhile(i Interpreter, args []env.Value) (env.Value, error) {
 	return runLoop(i, slices.Fst(args), slices.Lst(args), nil)
+}
+
+func runReturn(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, ErrReturn
 }
 
 func runBreak(i Interpreter, args []env.Value) (env.Value, error) {

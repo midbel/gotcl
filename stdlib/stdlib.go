@@ -30,6 +30,10 @@ type Interpreter interface {
 	Delete(string)
 }
 
+type Return struct {
+	Code int
+}
+
 type CommandFunc func(Interpreter, []env.Value) (env.Value, error)
 
 type Executer interface {
