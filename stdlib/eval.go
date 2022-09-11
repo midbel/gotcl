@@ -85,6 +85,7 @@ func RunTime() Executer {
 	return Builtin{
 		Name:  "time",
 		Arity: 1,
+		Safe:  true,
 		Run:   runTime,
 	}
 }
@@ -115,11 +116,10 @@ func RunReturn() Executer {
 
 func RunUnknown() Executer {
 	return Builtin{
-		Name: "unknown",
-		Safe: true,
-		Arity: 1,
+		Name:     "unknown",
+		Arity:    1,
 		Variadic: true,
-		Run: runUnknown,
+		Run:      runUnknown,
 	}
 }
 
@@ -207,30 +207,63 @@ func RunIf() Executer {
 
 func RunError() Executer {
 	return Builtin{
-		Name: "error",
+		Name:     "error",
+		Safe:     true,
+		Arity:    1,
+		Variadic: true,
+		Run:      runError,
 	}
 }
 
 func RunCatch() Executer {
 	return Builtin{
-		Name: "catch",
+		Name:     "catch",
+		Safe:     true,
+		Arity:    1,
+		Variadic: true,
+		Run:      runCatch,
 	}
 }
 
 func RunThrow() Executer {
 	return Builtin{
-		Name: "throw",
+		Name:  "throw",
+		Safe:  true,
+		Arity: 2,
+		Run:   runThrow,
 	}
 }
 
 func RunTry() Executer {
 	return Builtin{
-		Name: "try",
+		Name:     "try",
+		Safe:     true,
+		Arity:    2,
+		Variadic: true,
+		Run:      runTry,
 	}
 }
 
+func runTry(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runThrow(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runCatch(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func runError(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
 func runUnknown(i Interpreter, args []env.Value) (env.Value, error) {
-	uh, ok := i.(interface{ RegisterUnknown(string, []env.Value) error })
+	uh, ok := i.(interface {
+		RegisterUnknown(string, []env.Value) error
+	})
 	if !ok {
 		return nil, fmt.Errorf("interpreter can not register unknown handler")
 	}
