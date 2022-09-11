@@ -113,6 +113,8 @@ func MathfuncSet() CommandSet {
 	set.registerCmd("isqrt", stdlib.RunIsqrt())
 	set.registerCmd("sqrt", stdlib.RunSqrt())
 	set.registerCmd("wide", stdlib.RunWide())
+	set.registerCmd("rad", stdlib.RunRadian())
+	set.registerCmd("deg", stdlib.RunDegree())
 	return set
 }
 

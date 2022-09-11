@@ -158,127 +158,299 @@ func RunGe() Executer {
 }
 
 func RunAbs() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "abs",
+		Arity: 1,
+		Safe:  true,
+		Run:   runAbs,
+	}
 }
 
 func RunAcos() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "acos",
+		Arity: 1,
+		Safe:  true,
+		Run:   runAcos,
+	}
 }
 
 func RunAsin() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "asin",
+		Arity: 1,
+		Safe:  true,
+		Run:   runAsin,
+	}
 }
 
 func RunAtan() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "atan",
+		Arity: 1,
+		Safe:  true,
+		Run:   runAtan,
+	}
 }
 
 func RunAtan2() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "atan2",
+		Arity: 2,
+		Safe:  true,
+		Run:   runAtan2,
+	}
 }
 
 func RunCos() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "cos",
+		Arity: 1,
+		Safe:  true,
+		Run:   runCos,
+	}
 }
 
 func RunCosh() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "cosh",
+		Arity: 1,
+		Safe:  true,
+		Run:   runCosh,
+	}
 }
 
 func RunSin() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "sin",
+		Arity: 1,
+		Safe:  true,
+		Run:   runSin,
+	}
 }
 
 func RunSinh() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "sinh",
+		Arity: 1,
+		Safe:  true,
+		Run:   runSinh,
+	}
 }
 
 func RunTan() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "tan",
+		Arity: 1,
+		Safe:  true,
+		Run:   runTan,
+	}
 }
 
 func RunTanh() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "tanh",
+		Arity: 1,
+		Safe:  true,
+		Run:   runTanh,
+	}
 }
 
 func RunHypot() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "hypot",
+		Arity: 2,
+		Safe:  true,
+		Run:   runHypot,
+	}
 }
 
 func RunBool() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "bool",
+		Arity: 1,
+		Safe:  true,
+		Run:   runBool,
+	}
 }
 
 func RunDouble() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "double",
+		Arity: 1,
+		Safe:  true,
+		Run:   runDouble,
+	}
 }
 
 func RunEntier() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "entier",
+		Arity: 1,
+		Safe:  true,
+		Run:   runEntier,
+	}
 }
 
 func RunCeil() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "ceil",
+		Arity: 1,
+		Safe:  true,
+		Run:   runCeil,
+	}
 }
 
 func RunFloor() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "floor",
+		Arity: 1,
+		Safe:  true,
+		Run:   runFloor,
+	}
 }
 
 func RunRound() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "round",
+		Arity: 1,
+		Safe:  true,
+		Run:   runRound,
+	}
 }
 
 func RunFmod() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "fmod",
+		Arity: 1,
+		Safe:  true,
+		Run:   runFmod,
+	}
 }
 
 func RunInt() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "int",
+		Arity: 1,
+		Safe:  true,
+		Run:   runInt,
+	}
 }
 
 func RunExp() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "exp",
+		Arity: 1,
+		Safe:  true,
+		Run:   runExp,
+	}
 }
 
 func RunLog() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "log",
+		Arity: 1,
+		Safe:  true,
+		Run:   runLog,
+	}
 }
 
 func RunLog10() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "log10",
+		Arity: 1,
+		Safe:  true,
+		Run:   runLog10,
+	}
 }
 
 func RunMax() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:     "max",
+		Variadic: true,
+		Safe:     true,
+		Run:      runMax,
+	}
 }
 
 func RunMin() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:     "min",
+		Variadic: true,
+		Safe:     true,
+		Run:      runMin,
+	}
 }
 
 func RunRaise() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "pow",
+		Arity: 2,
+		Safe:  true,
+		Run:   runRaise,
+	}
 }
 
 func RunRand() Executer {
-	return Builtin{}
+	return Builtin{
+		Name: "rand",
+		Safe: true,
+		Run:  runRand,
+	}
 }
 
 func RunSrand() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "srand",
+		Arity: 1,
+		Safe:  true,
+		Run:   runSrand,
+	}
 }
 
 func RunIsqrt() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "isqrt",
+		Arity: 1,
+		Safe:  true,
+		Run:   runIsqrt,
+	}
 }
 
 func RunSqrt() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "sqrt",
+		Arity: 1,
+		Safe:  true,
+		Run:   runSqrt,
+	}
 }
 
 func RunWide() Executer {
-	return Builtin{}
+	return Builtin{
+		Name:  "wide",
+		Arity: 1,
+		Safe:  true,
+		Run:   runWide,
+	}
+}
+
+func RunDegree() Executer {
+	return Builtin{
+		Name:  "deg",
+		Arity: 1,
+		Safe:  true,
+		Run:   runDegree,
+	}
+}
+
+func RunRadian() Executer {
+	return Builtin{
+		Name:  "rad",
+		Arity: 1,
+		Safe:  true,
+		Run:   runRadian,
+	}
 }
 
 func runIncr(i Interpreter, args []env.Value) (env.Value, error) {
@@ -469,108 +641,124 @@ func withNumbers(args []env.Value, do func(float64, float64) (float64, error)) (
 	return env.Float(res), nil
 }
 
+func runDegree(i Interpreter, args []env.Value) (env.Value, error) {
+	return withFloat(slices.Fst(args), func(f float64) float64 {
+		return f * (180 / math.Pi)
+	})
+}
+
+func runRadian(i Interpreter, args []env.Value) (env.Value, error) {
+	return withFloat(slices.Fst(args), func(f float64) float64 {
+		return f * (math.Pi / 180)
+	})
+}
+
 func runAbs(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Abs)
 }
 
 func runAcos(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Acos)
 }
 
 func runAsin(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Asin)
 }
 
 func runAtan(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Atan)
 }
 
 func runAtan2(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat2(slices.Fst(args), slices.Snd(args), math.Atan2)
 }
 
 func runCos(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Cos)
 }
 
 func runCosh(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Cosh)
 }
 
 func runSin(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Sin)
 }
 
 func runSinh(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Sinh)
 }
 
 func runTan(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Tan)
 }
 
 func runTanh(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Tan)
 }
 
 func runHypot(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat2(slices.Fst(args), slices.Snd(args), math.Hypot)
 }
 
 func runBool(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	f, err := env.ToFloat(slices.Fst(args))
+	if err != nil {
+		return env.False(), nil
+	}
+	return env.Bool(f != 0), nil
 }
 
 func runDouble(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return slices.Fst(args).ToNumber()
 }
 
 func runEntier(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return slices.Fst(args).ToNumber()
 }
 
 func runCeil(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Ceil)
 }
 
 func runFloor(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Floor)
 }
 
 func runRound(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Round)
 }
 
 func runFmod(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat2(slices.Fst(args), slices.Snd(args), math.Mod)
 }
 
 func runInt(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return slices.Fst(args).ToNumber()
 }
 
 func runExp(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Exp)
 }
 
 func runLog(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Log)
 }
 
 func runLog10(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Log10)
 }
 
 func runMax(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return cmpFloat(args, math.Max)
 }
 
 func runMin(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return cmpFloat(args, math.Min)
 }
 
 func runRaise(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat2(slices.Fst(args), slices.Snd(args), math.Pow)
 }
 
 func runRand(i Interpreter, args []env.Value) (env.Value, error) {
@@ -586,9 +774,44 @@ func runIsqrt(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func runSqrt(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return withFloat(slices.Fst(args), math.Sqrt)
 }
 
 func runWide(i Interpreter, args []env.Value) (env.Value, error) {
 	return nil, nil
+}
+
+func withFloat(v env.Value, do func(float64) float64) (env.Value, error) {
+	f, err := env.ToFloat(v)
+	if err != nil {
+		return nil, err
+	}
+	return env.Float(do(f)), nil
+}
+
+func withFloat2(fst, snd env.Value, do func(float64, float64) float64) (env.Value, error) {
+	var (
+		v1, err1 = env.ToFloat(fst)
+		v2, err2 = env.ToFloat(snd)
+	)
+	if err := hasError(err1, err2); err != nil {
+		return nil, err
+	}
+	return env.Float(do(v1, v2)), nil
+}
+
+func cmpFloat(args []env.Value, cmp func(float64, float64) float64) (env.Value, error) {
+	var (
+		val float64
+		tmp float64
+		err error
+	)
+	for i := 0; i < len(args); i++ {
+		tmp, err = env.ToFloat(args[i])
+		if err != nil {
+			break
+		}
+		val = cmp(val, tmp)
+	}
+	return env.Float(val), nil
 }
