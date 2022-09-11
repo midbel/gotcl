@@ -228,6 +228,14 @@ func IsSet(list []Option, name string) (int, error) {
 	return 0, fmt.Errorf("%s: option not supported", name)
 }
 
+func testScript(i Interpreter, v env.Value) (bool, error) {
+	v, err := i.Execute(strings.NewReader(v.String()))
+	if err != nil {
+		return false, err
+	}
+	return env.ToBool(v), nil
+}
+
 func hasError(es ...error) error {
 	for i := range es {
 		if es[i] != nil {

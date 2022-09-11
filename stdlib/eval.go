@@ -10,6 +10,7 @@ import (
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/gotcl/expr"
 	"github.com/midbel/gotcl/expr/types"
+	"github.com/midbel/gotcl/glob"
 	"github.com/midbel/slices"
 )
 
@@ -220,10 +221,70 @@ func RunTry() Executer {
 }
 
 func runIf(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	for len(args) > 0 {
+		b, err := testScript(i, slices.Fst(args))
+		if err != nil {
+			return nil, err
+		}
+		if next := slices.Snd(args).String(); next == "then" {
+			args = slices.Take(args, 2)
+		} else {
+			args = slices.Take(args, 1)
+		}
+		if b {
+			return i.Execute(strings.NewReader(slices.Fst(args).String()))
+		}
+		args = slices.Rest(args)
+		if kw := slices.Fst(args).String(); kw == "else" {
+			break
+		} else if kw == "elseif" {
+			args = slices.Rest(args)
+		}
+	}
+	return i.Execute(strings.NewReader(slices.Lst(args).String()))
 }
 
 func runSwitch(i Interpreter, args []env.Value) (env.Value, error) {
+	list, err := env.ToStringList(slices.Lst(args))
+	if err != nil {
+		return nil, err
+	}
+	if len(list)%2 != 0 {
+		return nil, fmt.Errorf("invalid argument")
+	}
+	var (
+		nocase, _ = i.Resolve("nocase")
+		exact, _  = i.Resolve("exact")
+		match, _  = i.Resolve("glob")
+		input     = slices.Fst(args).String()
+	)
+	if env.ToBool(nocase) {
+		input = strings.ToLower(input)
+	}
+	var alt string
+	for j := 0; j < len(list); j += 2 {
+		if list[j] == "default" {
+			if j != len(list)-2 {
+				return nil, fmt.Errorf("syntax error! default must be the last pattern")
+			}
+			alt = list[j+1]
+			break
+		}
+		pat := list[j]
+		if env.ToBool(nocase) {
+			pat = strings.ToLower(pat)
+		}
+		switch {
+		default:
+		case env.ToBool(exact) && pat == input:
+			return i.Execute(strings.NewReader(list[j+1]))
+		case env.ToBool(match) && glob.Match(input, pat):
+			return i.Execute(strings.NewReader(list[j+1]))
+		}
+	}
+	if alt != "" {
+		return i.Execute(strings.NewReader(alt))
+	}
 	return nil, nil
 }
 
@@ -397,11 +458,11 @@ func linkVars(k LinkHandler, args []env.Value, level int) error {
 func runLoop(i Interpreter, cdt, body, next env.Value) (env.Value, error) {
 	var res env.Value
 	for {
-		b, err := i.Execute(strings.NewReader(cdt.String()))
+		b, err := testScript(i, cdt)
 		if err != nil {
 			return nil, err
 		}
-		if !env.ToBool(b) {
+		if !b {
 			break
 		}
 		res, err = i.Execute(strings.NewReader(body.String()))
