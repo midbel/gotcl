@@ -26,13 +26,13 @@ const (
 	modeAppendBoth = "a+"
 )
 
-type FileSet struct {
+type Fileset struct {
 	files map[string]*os.File
 	next  int
 }
 
-func Stdio() *FileSet {
-	fs := FileSet{
+func Stdio() *Fileset {
+	fs := Fileset{
 		files: make(map[string]*os.File),
 	}
 	fs.register("0", os.Stdin)
@@ -42,7 +42,7 @@ func Stdio() *FileSet {
 	return &fs
 }
 
-func (fs *FileSet) Print(fd, str string) error {
+func (fs *Fileset) Print(fd, str string) error {
 	w, err := fs.lookup(fd)
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (fs *FileSet) Print(fd, str string) error {
 	return nil
 }
 
-func (fs *FileSet) Println(fd, str string) error {
+func (fs *Fileset) Println(fd, str string) error {
 	if err := fs.Print(fd, str); err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (fs *FileSet) Println(fd, str string) error {
 	return nil
 }
 
-func (fs *FileSet) Open(file, mode string) (string, error) {
+func (fs *Fileset) Open(file, mode string) (string, error) {
 	var (
 		f   *os.File
 		err error
@@ -88,7 +88,7 @@ func (fs *FileSet) Open(file, mode string) (string, error) {
 	return fd, nil
 }
 
-func (fs *FileSet) Close(fd string) error {
+func (fs *Fileset) Close(fd string) error {
 	w, err := fs.lookup(fd)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func (fs *FileSet) Close(fd string) error {
 	return w.Close()
 }
 
-func (fs *FileSet) Seek(fd string, offset, whence int) (int64, error) {
+func (fs *Fileset) Seek(fd string, offset, whence int) (int64, error) {
 	w, err := fs.lookup(fd)
 	if err != nil {
 		return 0, err
@@ -105,11 +105,11 @@ func (fs *FileSet) Seek(fd string, offset, whence int) (int64, error) {
 	return w.Seek(int64(offset), whence)
 }
 
-func (fs *FileSet) Tell(fd string) (int64, error) {
+func (fs *Fileset) Tell(fd string) (int64, error) {
 	return fs.Seek(fd, 0, io.SeekCurrent)
 }
 
-func (fs *FileSet) Gets(fd string) (string, error) {
+func (fs *Fileset) Gets(fd string) (string, error) {
 	w, err := fs.lookup(fd)
 	if err != nil {
 		return "", err
@@ -143,7 +143,7 @@ func (fs *FileSet) Gets(fd string) (string, error) {
 	return strings.TrimSpace(string(ret)), nil
 }
 
-func (fs *FileSet) Read(fd string, length int) (string, error) {
+func (fs *Fileset) Read(fd string, length int) (string, error) {
 	w, err := fs.lookup(fd)
 	if err != nil {
 		return "", err
@@ -161,7 +161,7 @@ func (fs *FileSet) Read(fd string, length int) (string, error) {
 	return "", err
 }
 
-func (fs *FileSet) Eof(fd string) (bool, error) {
+func (fs *Fileset) Eof(fd string) (bool, error) {
 	w, err := fs.lookup(fd)
 	if err != nil {
 		return false, err
@@ -177,12 +177,12 @@ func (fs *FileSet) Eof(fd string) (bool, error) {
 	return tell == s.Size(), nil
 }
 
-func (fs *FileSet) register(fd string, f *os.File) {
+func (fs *Fileset) register(fd string, f *os.File) {
 	fs.files[fd] = f
 	fs.next++
 }
 
-func (fs *FileSet) lookup(fd string) (*os.File, error) {
+func (fs *Fileset) lookup(fd string) (*os.File, error) {
 	switch fd {
 	case stdout, "":
 		fd = "1"

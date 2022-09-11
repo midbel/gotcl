@@ -43,27 +43,29 @@ func PrintArray() Executer {
 		Name:  "parray",
 		Arity: 1,
 		Safe:  true,
-		Run: func(i Interpreter, args []env.Value) (env.Value, error) {
-			arr, err := i.Resolve(slices.Fst(args).String())
-			if err != nil {
-				return nil, err
-			}
-			arr, err = arr.ToArray()
-			if err != nil {
-				return nil, err
-			}
-			ph, ok := i.(PrintHandler)
-			if !ok {
-				return nil, fmt.Errorf("interpreter can not print array to channel")
-			}
-			vs := arr.(env.Array)
-			for _, n := range vs.Names() {
-				msg := fmt.Sprintf("%s(%s) = %s", slices.Fst(args), n, vs.Get(n))
-				ph.Print("stdout", msg, true)
-			}
-			return nil, nil
-		},
+		Run:   printArray,
 	}
+}
+
+func printArray(i Interpreter, args []env.Value) (env.Value, error) {
+	arr, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	arr, err = arr.ToArray()
+	if err != nil {
+		return nil, err
+	}
+	ph, ok := i.(PrintHandler)
+	if !ok {
+		return nil, fmt.Errorf("interpreter can not print array to channel")
+	}
+	vs := arr.(env.Array)
+	for _, n := range vs.Names() {
+		msg := fmt.Sprintf("%s(%s) = %s", slices.Fst(args), n, vs.Get(n))
+		ph.Println("stdout", msg)
+	}
+	return nil, nil
 }
 
 func arrayNames(i Interpreter, args []env.Value) (env.Value, error) {

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 
@@ -22,8 +21,7 @@ type Interpreter struct {
 	safe   bool
 	frames []*Frame
 
-	Out io.Writer
-	Err io.Writer
+	*Fileset
 
 	name     string
 	parent   *Interpreter
@@ -36,10 +34,9 @@ func Interpret() *Interpreter {
 
 func defaultInterpreter(name string, safe bool) *Interpreter {
 	i := Interpreter{
-		Out:  os.Stdout,
-		Err:  os.Stderr,
-		safe: safe,
-		name: name,
+		safe:    safe,
+		name:    name,
+		Fileset: Stdio(),
 	}
 	i.push(GlobalNS())
 	return &i
@@ -305,23 +302,6 @@ func (i *Interpreter) Resolve(n string) (env.Value, error) {
 		v, err = i.frames[k.At()].env.Resolve(k.String())
 	}
 	return v, err
-}
-
-func (i *Interpreter) Print(ch, msg string, nl bool) error {
-	var w io.Writer
-	switch ch {
-	case "stdout":
-		w = i.Out
-	case "stderr":
-		w = i.Err
-	default:
-		return fmt.Errorf("%s: unknown channel", ch)
-	}
-	fmt.Fprint(w, msg)
-	if nl {
-		fmt.Fprintln(w)
-	}
-	return nil
 }
 
 func (i *Interpreter) Commands(pat string) []string {
