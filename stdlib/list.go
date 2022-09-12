@@ -36,6 +36,7 @@ func RunLSet() Executer {
 		Name:  "lset",
 		Arity: 1,
 		Safe:  true,
+		Run:   listSet,
 	}
 }
 
@@ -44,6 +45,7 @@ func RunLSort() Executer {
 		Name:  "lsort",
 		Arity: 1,
 		Safe:  true,
+		Run:   listSort,
 	}
 }
 
@@ -52,6 +54,7 @@ func RunLSearch() Executer {
 		Name:  "lsearch",
 		Arity: 1,
 		Safe:  true,
+		Run:   listSearch,
 	}
 }
 
@@ -60,6 +63,7 @@ func RunLReverse() Executer {
 		Name:  "lreverse",
 		Arity: 1,
 		Safe:  true,
+		Run:   listReverse,
 	}
 }
 
@@ -68,6 +72,7 @@ func RunLReplace() Executer {
 		Name:  "lreplace",
 		Arity: 1,
 		Safe:  true,
+		Run:   listReplace,
 	}
 }
 
@@ -76,6 +81,7 @@ func RunLRepeat() Executer {
 		Name:  "lrepeat",
 		Arity: 1,
 		Safe:  true,
+		Run:   listRepeat,
 	}
 }
 
@@ -84,6 +90,7 @@ func RunLIndex() Executer {
 		Name:  "lindex",
 		Arity: 1,
 		Safe:  true,
+		Run:   listIndex,
 	}
 }
 
@@ -92,6 +99,7 @@ func RunLMap() Executer {
 		Name:  "lmap",
 		Arity: 1,
 		Safe:  true,
+		Run:   listMap,
 	}
 }
 
@@ -100,6 +108,7 @@ func RunLRange() Executer {
 		Name:  "lrange",
 		Arity: 1,
 		Safe:  true,
+		Run:   listRange,
 	}
 }
 
@@ -108,6 +117,7 @@ func RunLAssign() Executer {
 		Name:  "lassign",
 		Arity: 1,
 		Safe:  true,
+		Run:   listAssign,
 	}
 }
 
@@ -116,6 +126,7 @@ func RunLAppend() Executer {
 		Name:  "lappend",
 		Arity: 1,
 		Safe:  true,
+		Run:   listAppend,
 	}
 }
 
@@ -124,6 +135,7 @@ func RunLInsert() Executer {
 		Name:  "linsert",
 		Arity: 1,
 		Safe:  true,
+		Run:   listInsert,
 	}
 }
 
@@ -141,4 +153,52 @@ func listLength(i Interpreter, args []env.Value) (env.Value, error) {
 		return env.Int(0), nil
 	}
 	return env.Int(int64(n.Len())), nil
+}
+
+func listInsert(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listAssign(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listAppend(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listMap(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listRange(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listIndex(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listRepeat(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listReplace(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listReverse(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listSearch(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listSort(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
+func listSet(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
 }

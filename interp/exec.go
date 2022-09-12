@@ -79,6 +79,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("lrepeat", stdlib.RunLRepeat())
 	set.registerCmd("lindex", stdlib.RunLIndex())
 	set.registerCmd("lmap", stdlib.RunLMap())
+	set.registerCmd("lrange", stdlib.RunLRange())
 	set.registerCmd("lassign", stdlib.RunLAssign())
 	set.registerCmd("lappend", stdlib.RunLAppend())
 	set.registerCmd("linsert", stdlib.RunLInsert())
