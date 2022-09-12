@@ -23,7 +23,15 @@ func RunHelp() Executer {
 		Help:  "retrieve help of given builtin command",
 		Arity: 1,
 		Safe:  true,
-		Run:   runHelp,
+		Options: []Option{
+			{
+				Name:  "usage",
+				Flag:  true,
+				Value: env.False(),
+				Check: CheckBool,
+			},
+		},
+		Run: runHelp,
 	}
 }
 
