@@ -69,6 +69,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("gets", stdlib.RunGets())
 	set.registerCmd("read", stdlib.RunRead())
 	set.registerCmd("chan", stdlib.MakeChan())
+	set.registerCmd("file", stdlib.MakeFile())
 	return set
 }
 
