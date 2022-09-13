@@ -38,7 +38,7 @@ func defaultInterpreter(name string, safe bool) *Interpreter {
 		name:    name,
 		Fileset: Stdio(),
 	}
-	i.push(GlobalNS())
+	i.pushDefault(GlobalNS())
 	return &i
 }
 
@@ -61,7 +61,7 @@ func (i *Interpreter) RegisterNS(name, body string) error {
 	if err := i.currentNS().RegisterNS(ns); err != nil {
 		return err
 	}
-	i.push(ns)
+	i.pushDefault(ns)
 	defer i.pop()
 
 	_, err := i.Execute(strings.NewReader(body))
@@ -353,8 +353,15 @@ func (i Interpreter) IsComplete(cmd string) bool {
 	return false
 }
 
-func (i *Interpreter) Current(level int) (string, []string, error) {
-	return "", nil, nil
+func (i *Interpreter) CurrentFrame(level int) (string, []string, error) {
+	var (
+		f = i.currentFrame()
+		as []string
+	)
+	for i := range f.args {
+		as = append(as, f.args[i].String())
+	}
+	return f.cmd.GetName(), as, nil
 }
 
 func (i *Interpreter) Execute(r io.Reader) (env.Value, error) {
@@ -409,9 +416,13 @@ func (i *Interpreter) execute(c *Command) (env.Value, error) {
 		return nil, fmt.Errorf("command %s: can not be execute in unsafe interpreter", c.Name.String())
 	}
 	if _, ok := exec.(procedure); ok {
-		i.push(ns)
+		i.pushDefault(ns)
 		defer i.executeDefer()
 	}
+	f := i.currentFrame()
+	f.cmd = exec
+	f.args = c.Args
+
 	defer func() {
 		i.count++
 	}()
@@ -425,10 +436,16 @@ func (i *Interpreter) isSafe(exec stdlib.Executer) bool {
 	return !i.safe || (i.safe && exec.IsSafe())
 }
 
-func (i *Interpreter) push(ns *Namespace) {
+func (i *Interpreter) pushDefault(ns *Namespace) {
+	i.push(ns, nil, nil)
+}
+
+func (i *Interpreter) push(ns *Namespace, e stdlib.Executer, as []env.Value) {
 	f := &Frame{
-		env: env.EmptyEnv(),
-		ns:  ns,
+		env:  env.EmptyEnv(),
+		ns:   ns,
+		cmd:  e,
+		args: as,
 	}
 	i.frames = append(i.frames, f)
 }

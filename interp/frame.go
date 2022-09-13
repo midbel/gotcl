@@ -10,8 +10,8 @@ type Frame struct {
 	ns       *Namespace
 	deferred []stdlib.Executer
 
-	cmd  string
-	args []string
+	cmd  stdlib.Executer
+	args []env.Value
 }
 
 func (f *Frame) Names() []string {

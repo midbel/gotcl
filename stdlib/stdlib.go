@@ -46,14 +46,14 @@ type Error struct {
 
 func ErrorWithCode(msg string, code int) error {
 	return Error{
-		Err: errors.New(msg),
+		Err:  errors.New(msg),
 		Code: code,
 	}
 }
 
 func ErrorFromError(err error) error {
 	return Error{
-		Err: err,
+		Err:  err,
 		Code: ErrorErr,
 	}
 }

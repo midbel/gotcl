@@ -12,7 +12,7 @@ type CommandHandler interface {
 	Depth() int
 	Count() int
 	Commands(string) []string
-	Current(int) (string, []string, error)
+	CurrentFrame(int) (string, []string, error)
 }
 
 type commandHandlerFunc func(CommandHandler, []env.Value) (env.Value, error)
@@ -191,7 +191,7 @@ func infoCommandLevel(ch CommandHandler, args []env.Value) (env.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd, params, err := ch.Current(int(n))
+	cmd, params, err := ch.CurrentFrame(int(n))
 	if err != nil {
 		return nil, err
 	}
