@@ -16,7 +16,9 @@ import (
 const Version = "0.0.1"
 
 type Interpreter struct {
-	last   env.Value
+	last env.Value
+	err  error
+
 	count  int
 	safe   bool
 	frames []*Frame
@@ -355,7 +357,7 @@ func (i Interpreter) IsComplete(cmd string) bool {
 
 func (i *Interpreter) CurrentFrame(level int) (string, []string, error) {
 	var (
-		f = i.currentFrame()
+		f  = i.currentFrame()
 		as []string
 	)
 	for i := range f.args {
@@ -372,7 +374,7 @@ func (i *Interpreter) Execute(r io.Reader) (env.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	for {
+	for i.err != nil {
 		c, err := p.Parse(i)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -380,12 +382,9 @@ func (i *Interpreter) Execute(r io.Reader) (env.Value, error) {
 			}
 			return nil, err
 		}
-		i.last, err = i.execute(c)
-		if err != nil {
-			return nil, err
-		}
+		i.last, i.err = i.execute(c)
 	}
-	return i.last, nil
+	return i.last, i.err
 }
 
 func (i *Interpreter) execute(c *Command) (env.Value, error) {

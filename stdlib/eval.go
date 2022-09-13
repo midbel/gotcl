@@ -258,7 +258,20 @@ func runThrow(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func runCatch(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	var (
+		res, err = i.Execute(strings.NewReader(slices.Fst(args).String()))
+		name     = slices.Snd(args)
+		code     int64
+	)
+	if err != nil {
+		code = int64(ErrorErr)
+		if e, ok := err.(Error); ok {
+			code = int64(e.Code)
+		}
+		res = env.Str(err.Error())
+	}
+	i.Define(name.String(), res)
+	return env.Int(code), nil
 }
 
 func runError(i Interpreter, args []env.Value) (env.Value, error) {
