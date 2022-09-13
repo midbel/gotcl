@@ -243,14 +243,65 @@ func RunTry() Executer {
 	return Builtin{
 		Name:     "try",
 		Safe:     true,
-		Arity:    2,
+		Arity:    1,
 		Variadic: true,
 		Run:      runTry,
 	}
 }
 
 func runTry(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	var finally string
+	if v := slices.At(args, len(args)-2); v != nil {
+		if v.String() == "finally" {
+			finally = slices.Lst(args).String()
+		}
+		args = slices.Take(args, len(args)-2)
+	}
+	var (
+		res, err = i.Execute(strings.NewReader(slices.Fst(args).String()))
+		errtry   error
+		errfin   error
+	)
+	if err != nil {
+		e, ok := err.(Error)
+		if !ok {
+			return nil, err
+		}
+		args = slices.Rest(args)
+		if len(args) % 4 != 0 {
+			return nil, fmt.Errorf("syntax error")
+		}
+		for j := 0; j < len(args); j += 4 {
+			if v := slices.At(args, j); v.String() != "on" {
+				return nil, fmt.Errorf("syntax error")
+			}
+			c, err := env.ToInt(slices.At(args, j+1))
+			if err != nil {
+				return nil, err
+			}
+			if e.Code == c {
+				names, err := env.ToStringList(slices.At(args, j+2))
+				if err != nil {
+					return nil, err
+				}
+				switch len(names) {
+				case 1:
+					i.Define(names[0], env.Int(int64(e.Code)))
+				case 2:
+					i.Define(names[0], env.Int(int64(e.Code)))
+					i.Define(names[1], env.Str(err.Error()))
+				default:
+				}
+				script := slices.At(args, j+3)
+				_, errtry = i.Execute(strings.NewReader(script.String()))
+				break
+			}
+		}
+	}
+	if finally != "" {
+		_, errfin = i.Execute(strings.NewReader(finally))
+	}
+	return res, hasError(err, errtry, errfin)
 }
 
 func runThrow(i Interpreter, args []env.Value) (env.Value, error) {
