@@ -31,17 +31,43 @@ type Interpreter interface {
 }
 
 const (
-	ReturnOk int = iota
-	ReturnErr
-	ReturnRet
-	ReturnBreak
-	ReturnContinue
+	ErrorOk int = iota
+	ErrorErr
+	ErrorRet
+	ErrorBreak
+	ErrorContinue
 )
 
-type Return struct {
-	env.Value
+type Error struct {
+	Err   error
 	Code  int
 	Level int
+}
+
+func ErrorWithCode(msg string, code int) error {
+	return Error{
+		Err: errors.New(msg),
+		Code: code,
+	}
+}
+
+func ErrorFromError(err error) error {
+	return Error{
+		Err: err,
+		Code: ErrorErr,
+	}
+}
+
+func DefaultError(msg string) error {
+	return ErrorWithCode(msg, ErrorErr)
+}
+
+func (e Error) Error() string {
+	return e.Err.Error()
+}
+
+func (e Error) Unwrap() error {
+	return e.Err
 }
 
 type CommandFunc func(Interpreter, []env.Value) (env.Value, error)

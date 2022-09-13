@@ -262,7 +262,15 @@ func runCatch(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func runError(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	code := ErrorErr
+	if v := slices.Snd(args); v != nil {
+		c, err := env.ToInt(v)
+		if err != nil {
+			return nil, ErrorFromError(err)
+		}
+		code = c
+	}
+	return nil, ErrorWithCode(slices.Fst(args).String(), code)
 }
 
 func runUnknown(i Interpreter, args []env.Value) (env.Value, error) {
