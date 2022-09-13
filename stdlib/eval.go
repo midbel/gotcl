@@ -268,7 +268,7 @@ func runTry(i Interpreter, args []env.Value) (env.Value, error) {
 			return nil, err
 		}
 		args = slices.Rest(args)
-		if len(args) % 4 != 0 {
+		if len(args)%4 != 0 {
 			return nil, fmt.Errorf("syntax error")
 		}
 		for j := 0; j < len(args); j += 4 {
@@ -345,14 +345,21 @@ func runUnknown(i Interpreter, args []env.Value) (env.Value, error) {
 		return nil, fmt.Errorf("interpreter can not register unknown handler")
 	}
 	err := uh.RegisterUnknown(slices.Fst(args).String(), slices.Rest(args))
-	return nil, err
+	return nil, ErrorFromError(err)
 }
 
 func runIf(i Interpreter, args []env.Value) (env.Value, error) {
+	var alt string
+	if v := slices.At(args, len(args)-2); v != nil {
+		if v.String() == "else" {
+			alt = slices.Lst(args).String()
+			args = slices.Take(args, len(args)-2)
+		}
+	}
 	for len(args) > 0 {
 		b, err := testScript(i, slices.Fst(args))
 		if err != nil {
-			return nil, err
+			return nil, ErrorFromError(err)
 		}
 		if next := slices.Snd(args).String(); next == "then" {
 			args = slices.Take(args, 2)
@@ -363,13 +370,14 @@ func runIf(i Interpreter, args []env.Value) (env.Value, error) {
 			return i.Execute(strings.NewReader(slices.Fst(args).String()))
 		}
 		args = slices.Rest(args)
-		if kw := slices.Fst(args).String(); kw == "else" {
-			break
-		} else if kw == "elseif" {
+		if kw := slices.Fst(args); kw != nil && kw.String() == "elseif" {
 			args = slices.Rest(args)
 		}
 	}
-	return i.Execute(strings.NewReader(slices.Lst(args).String()))
+	if alt != "" {
+		return i.Execute(strings.NewReader(alt))
+	}
+	return env.EmptyStr(), nil
 }
 
 func runSwitch(i Interpreter, args []env.Value) (env.Value, error) {
