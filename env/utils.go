@@ -34,7 +34,7 @@ func Range(list Value, first, last int) (Value, error) {
 	if first < 0 || first >= ls.Len() || last < 0 || last >= ls.Len() || first > last {
 		return nil, fmt.Errorf("invalid range given: %d - %d", first, last)
 	}
-	return ListFrom(ls.values[first : last]...), nil
+	return ListFrom(ls.values[first:last]...), nil
 }
 
 func getListFromValue(list Value) (List, error) {

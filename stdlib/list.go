@@ -99,11 +99,11 @@ func RunLIndex() Executer {
 
 func RunLMap() Executer {
 	return Builtin{
-		Name:  "lmap",
-		Arity: 3,
+		Name:     "lmap",
+		Arity:    3,
 		Variadic: true,
-		Safe:  true,
-		Run:   listMap,
+		Safe:     true,
+		Run:      listMap,
 	}
 }
 
@@ -172,7 +172,7 @@ func listAppend(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func listMap(i Interpreter, args []env.Value) (env.Value, error) {
-	if len(args) % 3 != 0 {
+	if len(args)%3 != 0 {
 		return nil, fmt.Errorf("invalid number of arguments given")
 	}
 	return nil, nil
