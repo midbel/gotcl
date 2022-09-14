@@ -1,6 +1,8 @@
 package stdlib
 
 import (
+	"fmt"
+
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/slices"
 )
@@ -78,17 +80,18 @@ func RunLReplace() Executer {
 
 func RunLRepeat() Executer {
 	return Builtin{
-		Name:  "lrepeat",
-		Arity: 1,
-		Safe:  true,
-		Run:   listRepeat,
+		Name:     "lrepeat",
+		Arity:    2,
+		Variadic: true,
+		Safe:     true,
+		Run:      listRepeat,
 	}
 }
 
 func RunLIndex() Executer {
 	return Builtin{
 		Name:  "lindex",
-		Arity: 1,
+		Arity: 2,
 		Safe:  true,
 		Run:   listIndex,
 	}
@@ -97,7 +100,8 @@ func RunLIndex() Executer {
 func RunLMap() Executer {
 	return Builtin{
 		Name:  "lmap",
-		Arity: 1,
+		Arity: 3,
+		Variadic: true,
 		Safe:  true,
 		Run:   listMap,
 	}
@@ -106,7 +110,7 @@ func RunLMap() Executer {
 func RunLRange() Executer {
 	return Builtin{
 		Name:  "lrange",
-		Arity: 1,
+		Arity: 3,
 		Safe:  true,
 		Run:   listRange,
 	}
@@ -168,19 +172,44 @@ func listAppend(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func listMap(i Interpreter, args []env.Value) (env.Value, error) {
+	if len(args) % 3 != 0 {
+		return nil, fmt.Errorf("invalid number of arguments given")
+	}
 	return nil, nil
 }
 
 func listRange(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	var (
+		fst, err1 = env.ToInt(slices.Snd(args))
+		lst, err2 = env.ToInt(slices.Lst(args))
+	)
+	if err := hasError(err1, err2); err != nil {
+		return nil, err
+	}
+	return env.Range(slices.Fst(args), fst, lst+1)
 }
 
 func listIndex(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	n, err := env.ToInt(slices.Snd(args))
+	if err != nil {
+		return nil, err
+	}
+	return env.At(slices.Fst(args), n)
 }
 
 func listRepeat(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	n, err := env.ToInt(slices.Fst(args))
+	if err != nil {
+		return nil, err
+	}
+	var (
+		list []env.Value
+		rest = slices.Rest(args)
+	)
+	for i := 0; i < n; i++ {
+		list = append(list, rest...)
+	}
+	return env.ListFrom(list...), nil
 }
 
 func listReplace(i Interpreter, args []env.Value) (env.Value, error) {
@@ -188,7 +217,7 @@ func listReplace(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func listReverse(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	return env.Reverse(slices.Fst(args))
 }
 
 func listSearch(i Interpreter, args []env.Value) (env.Value, error) {
