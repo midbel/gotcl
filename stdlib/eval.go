@@ -153,6 +153,16 @@ func RunBreak() Executer {
 	}
 }
 
+func RunForeach() Executer {
+	return Builtin{
+		Name:     "foreach",
+		Arity:    3,
+		Variadic: true,
+		Safe:     true,
+		Run:      runForeach,
+	}
+}
+
 func RunFor() Executer {
 	return Builtin{
 		Name:  "for",
@@ -421,6 +431,10 @@ func runSwitch(i Interpreter, args []env.Value) (env.Value, error) {
 	if alt != "" {
 		return i.Execute(strings.NewReader(alt))
 	}
+	return nil, nil
+}
+
+func runForeach(i Interpreter, args []env.Value) (env.Value, error) {
 	return nil, nil
 }
 

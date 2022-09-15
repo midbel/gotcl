@@ -183,6 +183,12 @@ func (i List) Append(v Value) {
 	i.values = append(i.values, v)
 }
 
+func (i List) Values() []Value {
+	vs := make([]Value, len(i.values))
+	copy(vs, i.values)
+	return vs
+}
+
 func (i List) String() string {
 	var list []string
 	for _, v := range i.values {

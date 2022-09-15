@@ -1,7 +1,9 @@
 package stdlib
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/midbel/gotcl/env"
 	"github.com/midbel/slices"
@@ -207,7 +209,23 @@ func listMap(i Interpreter, args []env.Value) (env.Value, error) {
 	if len(args)%3 != 0 {
 		return nil, fmt.Errorf("invalid number of arguments given")
 	}
-	return nil, nil
+	list, err := slices.Snd(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	var res []env.Value
+	for _, a := range list.(env.List).Values() {
+		i.Define(slices.Fst(args).String(), a)
+		r, err := i.Execute(strings.NewReader(slices.Lst(args).String()))
+		if err != nil && !errors.Is(err, ErrContinue) {
+			if errors.Is(err, ErrBreak) {
+				break
+			}
+			return nil, err
+		}
+		res = append(res, r)
+	}
+	return env.ListFrom(res...), nil
 }
 
 func listRange(i Interpreter, args []env.Value) (env.Value, error) {
