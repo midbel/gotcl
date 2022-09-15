@@ -435,7 +435,27 @@ func runSwitch(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func runForeach(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	if len(args) % 3 != 0 {
+		return nil, fmt.Errorf("wrong number of arguments given")
+	}
+	var res env.Value
+	for j := 0; j < len(args); j+=3 {
+		list, err := slices.At(args, j+1).ToList()
+		if err != nil {
+			return nil, err
+		}
+		for _, a := range list.(env.List).Values() {
+			i.Define(slices.At(args, j).String(), a)
+			res, err = i.Execute(strings.NewReader(slices.At(args, j+2).String()))
+			if err != nil && !errors.Is(err, ErrContinue) {
+				if errors.Is(err, ErrBreak) {
+					break
+				}
+				return nil, err
+			}
+		}
+	}
+	return res, nil
 }
 
 func runFor(i Interpreter, args []env.Value) (env.Value, error) {
