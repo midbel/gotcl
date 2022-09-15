@@ -86,6 +86,13 @@ func DefaultSet() CommandSet {
 	return set
 }
 
+func FileutilSet() CommandSet {
+	set := EmptySet()
+	set.registerCmd("cat", stdlib.RunFileCat())
+	set.registerCmd("foreachLine", stdlib.RunFileForeachLine())
+	return set
+}
+
 func UtilSet() CommandSet {
 	set := EmptySet()
 	set.registerCmd("defer", stdlib.RunDefer())

@@ -28,8 +28,8 @@ func EmptyNS(name string) *Namespace {
 }
 
 func GlobalNS() *Namespace {
-	ns := createNS("", DefaultSet())
-	ns.unknown = func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
+	global := createNS("", DefaultSet())
+	global.unknown = func(i stdlib.Interpreter, args []env.Value) (env.Value, error) {
 		var (
 			name   = slices.Fst(args).String()
 			values []string
@@ -44,20 +44,26 @@ func GlobalNS() *Namespace {
 	var (
 		mathfunc = createNS("mathfunc", MathfuncSet())
 		mathop   = createNS("mathop", MathopSet())
+		fileutil = FileutilNS()
 		utils    = UtilNS()
 		tcl      = emptyNS("tcl")
 	)
 	tcl.RegisterNS(mathfunc)
 	tcl.RegisterNS(mathop)
-	ns.RegisterNS(tcl)
-	ns.RegisterNS(utils)
-	return ns
+	global.RegisterNS(tcl)
+	global.RegisterNS(utils)
+	global.RegisterNS(fileutil)
+	return global
 }
 
 func UtilNS() *Namespace {
 	ns := createNS("util", UtilSet())
 	ns.env.Define("version", env.Str("1.12.189"))
 	return ns
+}
+
+func FileutilNS() *Namespace {
+	return createNS("fileutil", FileutilSet())
 }
 
 func emptyNS(name string) *Namespace {

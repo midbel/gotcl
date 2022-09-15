@@ -30,18 +30,6 @@ type Interpreter struct {
 	children []*Interpreter
 }
 
-// type Interactive struct {
-// 	*Interpreter
-// 	history []*Command
-// }
-//
-// func Interact() *Interactive {
-// 	i := Interactive{
-// 		Interpreter: defaultInterpreter("", true),
-// 	}
-// 	return &i
-// }
-
 func Interpret() *Interpreter {
 	return defaultInterpreter("", true)
 }
