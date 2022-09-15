@@ -35,10 +35,11 @@ func RunLLength() Executer {
 
 func RunLSet() Executer {
 	return Builtin{
-		Name:  "lset",
-		Arity: 1,
-		Safe:  true,
-		Run:   listSet,
+		Name:     "lset",
+		Arity:    2,
+		Variadic: true,
+		Safe:     true,
+		Run:      listSet,
 	}
 }
 
@@ -71,10 +72,11 @@ func RunLReverse() Executer {
 
 func RunLReplace() Executer {
 	return Builtin{
-		Name:  "lreplace",
-		Arity: 1,
-		Safe:  true,
-		Run:   listReplace,
+		Name:     "lreplace",
+		Arity:    3,
+		Variadic: true,
+		Safe:     true,
+		Run:      listReplace,
 	}
 }
 
@@ -118,28 +120,31 @@ func RunLRange() Executer {
 
 func RunLAssign() Executer {
 	return Builtin{
-		Name:  "lassign",
-		Arity: 1,
-		Safe:  true,
-		Run:   listAssign,
+		Name:     "lassign",
+		Arity:    1,
+		Variadic: true,
+		Safe:     true,
+		Run:      listAssign,
 	}
 }
 
 func RunLAppend() Executer {
 	return Builtin{
-		Name:  "lappend",
-		Arity: 1,
-		Safe:  true,
-		Run:   listAppend,
+		Name:     "lappend",
+		Arity:    1,
+		Variadic: true,
+		Safe:     true,
+		Run:      listAppend,
 	}
 }
 
 func RunLInsert() Executer {
 	return Builtin{
-		Name:  "linsert",
-		Arity: 1,
-		Safe:  true,
-		Run:   listInsert,
+		Name:     "linsert",
+		Arity:    2,
+		Variadic: true,
+		Safe:     true,
+		Run:      listInsert,
 	}
 }
 
@@ -160,15 +165,42 @@ func listLength(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func listInsert(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	n, err := env.ToInt(slices.Snd(args))
+	if err != nil {
+		return nil, err
+	}
+	list, err := slices.Fst(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range slices.Take(args, 2) {
+		list.(env.List).Insert(n, a)
+	}
+	return list, nil
 }
 
 func listAssign(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	list, err := slices.Fst(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	for j, a := range slices.Rest(args) {
+		v := list.(env.List).At(j)
+		i.Define(a.String(), v)
+	}
+	return env.EmptyList(), nil
 }
 
 func listAppend(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
+	list, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		list = env.EmptyList()
+	}
+	for _, a := range slices.Rest(args) {
+		list.(env.List).Append(a)
+	}
+	i.Define(slices.Fst(args).String(), list)
+	return list, nil
 }
 
 func listMap(i Interpreter, args []env.Value) (env.Value, error) {
@@ -186,7 +218,11 @@ func listRange(i Interpreter, args []env.Value) (env.Value, error) {
 	if err := hasError(err1, err2); err != nil {
 		return nil, err
 	}
-	return env.Range(slices.Fst(args), fst, lst+1)
+	list, err := slices.Fst(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	return list.(env.List).Range(fst, lst+1)
 }
 
 func listIndex(i Interpreter, args []env.Value) (env.Value, error) {
@@ -194,7 +230,11 @@ func listIndex(i Interpreter, args []env.Value) (env.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return env.At(slices.Fst(args), n)
+	list, err := slices.Fst(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	return list.(env.List).At(n), nil
 }
 
 func listRepeat(i Interpreter, args []env.Value) (env.Value, error) {
@@ -213,11 +253,57 @@ func listRepeat(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func listReplace(i Interpreter, args []env.Value) (env.Value, error) {
+	var (
+		fst, err1 = env.ToInt(slices.At(args, 1))
+		lst, err2 = env.ToInt(slices.At(args, 2))
+	)
+	if err := hasError(err1, err2); err != nil {
+		return nil, err
+	}
+	list, err := slices.Fst(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range slices.Take(args, 3) {
+		list.(env.List).Replace(a, fst, lst)
+	}
 	return nil, nil
 }
 
 func listReverse(i Interpreter, args []env.Value) (env.Value, error) {
-	return env.Reverse(slices.Fst(args))
+	list, err := slices.Fst(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	return list.(env.List).Reverse(), nil
+}
+
+func listSet(i Interpreter, args []env.Value) (env.Value, error) {
+	if len(args) == 2 {
+		list := env.ListFrom(slices.Lst(args))
+		i.Define(slices.Fst(args).String(), list)
+		return list, nil
+	}
+	n, err := env.ToInt(slices.Snd(args))
+	if err != nil {
+		return nil, err
+	}
+	list, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	list, err = list.ToList()
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range slices.Take(args, 2) {
+		list, err = list.(env.List).Set(a, n)
+		if err != nil {
+			return nil, err
+		}
+	}
+	i.Define(slices.Fst(args).String(), list)
+	return nil, nil
 }
 
 func listSearch(i Interpreter, args []env.Value) (env.Value, error) {
@@ -225,9 +311,5 @@ func listSearch(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func listSort(i Interpreter, args []env.Value) (env.Value, error) {
-	return nil, nil
-}
-
-func listSet(i Interpreter, args []env.Value) (env.Value, error) {
 	return nil, nil
 }

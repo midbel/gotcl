@@ -19,17 +19,17 @@ func RunFileForeachLine() Executer {
 }
 
 func RunFileCat() Executer {
-  return Builtin{
-    Name:  "cat",
-    Arity: 1,
-    Safe:  true,
-    Run:   fileutilCat,
-  }
+	return Builtin{
+		Name:  "cat",
+		Arity: 1,
+		Safe:  true,
+		Run:   fileutilCat,
+	}
 }
 
 func fileutilCat(i Interpreter, args []env.Value) (env.Value, error) {
-  bs, err := os.ReadFile(slices.Fst(args).String())
-  return env.Str(string(bs)), err
+	bs, err := os.ReadFile(slices.Fst(args).String())
+	return env.Str(string(bs)), err
 }
 
 func fileutilForeachLine(i Interpreter, args []env.Value) (env.Value, error) {

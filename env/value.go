@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/midbel/slices"
 )
 
 var ErrCast = errors.New("type can not be casted")
@@ -115,6 +117,70 @@ func ListFrom(vs ...Value) Value {
 func EmptyList() Value {
 	var i List
 	return i
+}
+
+func (i List) At(n int) Value {
+	if n < 0 || n >= len(i.values) {
+		return EmptyStr()
+	}
+	return i.values[n]
+}
+
+func (i List) Range(fst, lst int) (Value, error) {
+	if fst < 0 || fst >= i.Len() || lst < 0 || lst >= i.Len() || fst > lst {
+		return nil, fmt.Errorf("invalid range given: %d - %d", fst, lst)
+	}
+	return ListFrom(i.values[fst:lst]...), nil
+}
+
+func (i List) Reverse() List {
+	j := List{}
+	j.values = slices.Reverse(i.values)
+	return j
+}
+
+func (i List) Set(v Value, n int) (Value, error) {
+	if n < 0 || n >= len(i.values) {
+		return nil, fmt.Errorf("index out of range")
+	}
+	vs := make([]Value, len(i.values))
+	copy(vs, i.values)
+	vs[n] = v
+	return ListFrom(vs...), nil
+}
+
+func (i List) Replace(v Value, fst, lst int) Value {
+	vs := make([]Value, len(i.values))
+	if fst < 0 || lst < 0 {
+		vs = append([]Value{v}, vs...)
+	}
+	if fst >= len(vs) || lst >= len(i.values) {
+		vs = append(vs, v)
+	}
+	if lst < fst {
+		lst = fst
+	}
+	vs = append(vs[:fst], append([]Value{v}, vs[lst:]...)...)
+	return ListFrom(vs...)
+}
+
+func (i List) Insert(n int, v Value) Value {
+	vs := make([]Value, len(i.values))
+	copy(vs, i.values)
+	if n <= 0 {
+		vs = append([]Value{v}, vs...)
+		return ListFrom(vs...)
+	}
+	if n >= len(vs) {
+		vs = append(vs, v)
+		return ListFrom(vs...)
+	}
+	vs = append(vs[:n], append([]Value{v}, vs[n:]...)...)
+	return ListFrom(vs...)
+}
+
+func (i List) Append(v Value) {
+	i.values = append(i.values, v)
 }
 
 func (i List) String() string {
