@@ -28,6 +28,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("string", stdlib.MakeString())
 	set.registerCmd("interp", stdlib.MakeInterp())
 	set.registerCmd("eval", stdlib.RunEval())
+	set.registerCmd("eval", stdlib.RunSource())
 	set.registerCmd("upvar", stdlib.RunUpvar())
 	set.registerCmd("uplevel", stdlib.RunUplevel())
 	set.registerCmd("incr", stdlib.RunIncr())

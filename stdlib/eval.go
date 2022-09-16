@@ -81,6 +81,16 @@ func RunEval() Executer {
 	}
 }
 
+func RunSource() Executer {
+	return Builtin{
+		Name:     "source",
+		Help:     "eval given script from file",
+		Variadic: true,
+		Safe:     false,
+		Run:      runSource,
+	}
+}
+
 func RunTime() Executer {
 	return Builtin{
 		Name:  "time",
@@ -257,6 +267,15 @@ func RunTry() Executer {
 		Variadic: true,
 		Run:      runTry,
 	}
+}
+
+func runSource(i Interpreter, args []env.Value) (env.Value, error) {
+	r, err := os.Open(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return i.Execute(r)
 }
 
 func runTry(i Interpreter, args []env.Value) (env.Value, error) {
