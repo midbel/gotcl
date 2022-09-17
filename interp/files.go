@@ -42,6 +42,23 @@ func Stdio() *Fileset {
 	return &fs
 }
 
+func (fs *Fileset) Channels() []string {
+	list := make([]string, 0, len(fs.files))
+	for k := range fs.files {
+		switch k {
+		case "0":
+			k = stdin
+		case "1":
+			k = stdout
+		case "2":
+			k = stderr
+		default:
+		}
+		list = append(list, k)
+	}
+	return list
+}
+
 func (fs *Fileset) Print(fd, str string) error {
 	w, err := fs.lookup(fd)
 	if err != nil {
