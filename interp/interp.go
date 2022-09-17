@@ -145,6 +145,14 @@ func (i *Interpreter) IsSafe() bool {
 	return i.safe
 }
 
+func (i *Interpreter) LookupExec(name string) (stdlib.Executer, error) {
+	parts := strings.Split(name, "::")
+	if len(parts) == 1 || parts[0] != "" {
+		return i.currentNS().LookupExec(parts)
+	}
+	return i.rootNS().LookupExec(parts[1:])
+}
+
 func (i *Interpreter) LookupInterpreter(name []string) (*Interpreter, error) {
 	if len(name) == 0 {
 		return i, nil
