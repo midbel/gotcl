@@ -246,6 +246,10 @@ func createProcedure(name, body, args string) (stdlib.Executer, error) {
 	return p, nil
 }
 
+func (_ procedure) Scoped() bool {
+	return true
+}
+
 func (p procedure) GetName() string {
 	return p.Name
 }

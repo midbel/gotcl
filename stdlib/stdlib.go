@@ -75,6 +75,7 @@ type CommandFunc func(Interpreter, []env.Value) (env.Value, error)
 type Executer interface {
 	GetName() string
 	IsSafe() bool
+	Scoped() bool
 	Execute(Interpreter, []env.Value) (env.Value, error)
 }
 
@@ -84,6 +85,10 @@ type Ensemble struct {
 	Help  string
 	Safe  bool
 	List  []Executer
+}
+
+func (_ Ensemble) Scoped() bool {
+	return false
 }
 
 func (e Ensemble) IsSafe() bool {
@@ -119,8 +124,13 @@ type Builtin struct {
 	Safe     bool
 	Arity    int
 	Variadic bool
+	Scope    bool
 	Run      CommandFunc
 	Options  []Option
+}
+
+func (b Builtin) Scoped() bool {
+	return b.Scope
 }
 
 func (b Builtin) IsSafe() bool {

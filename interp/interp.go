@@ -422,13 +422,14 @@ func (i *Interpreter) execute(c *Command) (env.Value, error) {
 	if !i.isSafe(exec) {
 		return nil, fmt.Errorf("command %s: can not be execute in unsafe interpreter", c.Name.String())
 	}
-	if _, ok := exec.(procedure); ok {
+	if ok := exec.Scoped(); ok {
 		i.pushDefault(ns)
 		defer i.executeDefer()
+		
+		f := i.currentFrame()
+		f.cmd = exec
+		f.args = c.Args
 	}
-	f := i.currentFrame()
-	f.cmd = exec
-	f.args = c.Args
 
 	defer func() {
 		i.count++
