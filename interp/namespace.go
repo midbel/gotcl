@@ -15,12 +15,15 @@ var ErrUndefined = errors.New("undefined name")
 
 type Namespace struct {
 	Name     string
+	Version  string
 	parent   *Namespace
 	children []*Namespace
 
 	env *env.Env
 	CommandSet
-	unknown stdlib.CommandFunc
+	exported CommandSet
+	imported CommandSet
+	unknown  stdlib.CommandFunc
 }
 
 func EmptyNS(name string) *Namespace {
@@ -44,6 +47,7 @@ func GlobalNS() *Namespace {
 	var (
 		mathfunc  = createNS("mathfunc", MathfuncSet())
 		mathop    = createNS("mathop", MathopSet())
+		prefix    = createNS("prefix", PrefixSet())
 		fileutil  = FileutilNS()
 		utils     = UtilNS()
 		tcl       = emptyNS("tcl")
@@ -51,6 +55,7 @@ func GlobalNS() *Namespace {
 	)
 	tcl.RegisterNS(mathfunc)
 	tcl.RegisterNS(mathop)
+	tcl.RegisterNS(prefix)
 	global.RegisterNS(tcl)
 	global.RegisterNS(utils)
 	global.RegisterNS(fileutil)
@@ -60,7 +65,6 @@ func GlobalNS() *Namespace {
 
 func UtilNS() *Namespace {
 	ns := createNS("util", UtilSet())
-	ns.env.Define("version", env.Str("1.12.189"))
 	return ns
 }
 
@@ -77,6 +81,8 @@ func createNS(name string, set CommandSet) *Namespace {
 		Name:       name,
 		CommandSet: set,
 		env:        env.EmptyEnv(),
+		exported:   EmptySet(),
+		imported:   EmptySet(),
 	}
 }
 

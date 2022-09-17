@@ -94,6 +94,14 @@ func StructSet() CommandSet {
 	return set
 }
 
+func PrefixSet() CommandSet {
+	set := EmptySet()
+	set.registerCmd("all", stdlib.RunPrefixAll())
+	set.registerCmd("longest", stdlib.RunPrefixLongest())
+	set.registerCmd("match", stdlib.RunPrefixMatch())
+	return set
+}
+
 func FileutilSet() CommandSet {
 	set := EmptySet()
 	set.registerCmd("cat", stdlib.RunFileCat())
