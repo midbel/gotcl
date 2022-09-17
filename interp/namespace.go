@@ -42,17 +42,19 @@ func GlobalNS() *Namespace {
 	}
 
 	var (
-		mathfunc = createNS("mathfunc", MathfuncSet())
-		mathop   = createNS("mathop", MathopSet())
-		fileutil = FileutilNS()
-		utils    = UtilNS()
-		tcl      = emptyNS("tcl")
+		mathfunc  = createNS("mathfunc", MathfuncSet())
+		mathop    = createNS("mathop", MathopSet())
+		fileutil  = FileutilNS()
+		utils     = UtilNS()
+		tcl       = emptyNS("tcl")
+		datstruct = createNS("struct", StructSet())
 	)
 	tcl.RegisterNS(mathfunc)
 	tcl.RegisterNS(mathop)
 	global.RegisterNS(tcl)
 	global.RegisterNS(utils)
 	global.RegisterNS(fileutil)
+	global.RegisterNS(datstruct)
 	return global
 }
 

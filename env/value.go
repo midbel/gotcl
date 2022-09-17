@@ -47,6 +47,10 @@ func (a Array) Set(n string, v Value) {
 	a.values[n] = v
 }
 
+func (a Array) Unset(n string) {
+	delete(a.values, n)
+}
+
 func (a Array) Pairs() Value {
 	var list []Value
 	for k, v := range a.values {
@@ -133,10 +137,51 @@ func (i List) Range(fst, lst int) (Value, error) {
 	return ListFrom(i.values[fst:lst]...), nil
 }
 
+func (i List) Flat(full bool) Value {
+	var flatten func(List, bool) []Value
+
+	flatten = func(i List, full bool) []Value {
+		vs := make([]Value, len(i.values))
+		for _, v := range i.values {
+			if a, ok := v.(List); ok && full {
+				xs := flatten(a, full)
+				vs = append(vs, xs...)
+			} else {
+				vs = append(vs, a)
+			}
+		}
+		return vs
+	}
+	return ListFrom(flatten(i, full)...)
+}
+
 func (i List) Reverse() List {
 	j := List{}
 	j.values = slices.Reverse(i.values)
 	return j
+}
+
+func (i List) Shuffle() Value {
+	vs := make([]Value, len(i.values))
+	copy(vs, i.values)
+	return ListFrom(slices.Shuffle(i.values)...)
+}
+
+func (i List) Equal(other Value) (bool, error) {
+	x, err := other.ToList()
+	if err != nil {
+		return false, err
+	}
+	j := x.(List)
+	if len(i.values) != len(j.values) {
+		return false, nil
+	}
+	for k := range i.values {
+		if i.values[k].String() != j.values[k].String() {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (i List) Set(v Value, n int) (Value, error) {
@@ -147,6 +192,25 @@ func (i List) Set(v Value, n int) (Value, error) {
 	copy(vs, i.values)
 	vs[n] = v
 	return ListFrom(vs...), nil
+}
+
+func (i List) Swap(j, k int) List {
+	i.values[j], i.values[k] = i.values[k], i.values[j]
+	return i
+}
+
+func (i List) Shift() (Value, Value) {
+	return slices.Fst(i.values), ListFrom(slices.Rest(i.values)...)
+}
+
+func (i List) Apply(do func(Value) Value) Value {
+	vs := slices.Map(i.values, do)
+	return ListFrom(vs...)
+}
+
+func (i List) Filter(do func(Value) bool) Value {
+	vs := slices.Filter(i.values, do)
+	return ListFrom(vs...)
 }
 
 func (i List) Replace(v Value, fst, lst int) Value {

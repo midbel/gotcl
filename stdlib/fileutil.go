@@ -27,6 +27,19 @@ func RunFileCat() Executer {
 	}
 }
 
+func RunFileWriteFile() Executer {
+	return Builtin{
+		Name:  "writeFile",
+		Arity: 2,
+		Safe:  true,
+		Run:   fileutilWriteFile,
+	}
+}
+
+func fileutilWriteFile(i Interpreter, args []env.Value) (env.Value, error) {
+	return nil, nil
+}
+
 func fileutilCat(i Interpreter, args []env.Value) (env.Value, error) {
 	bs, err := os.ReadFile(slices.Fst(args).String())
 	return env.Str(string(bs)), err

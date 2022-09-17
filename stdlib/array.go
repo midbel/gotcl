@@ -12,11 +12,17 @@ import (
 func MakeArray() Executer {
 	e := Ensemble{
 		Name: "array",
+		Safe: true,
 		List: []Executer{
 			Builtin{
 				Name:  "set",
 				Arity: 2,
 				Run:   arraySet,
+			},
+			Builtin{
+				Name:  "unset",
+				Arity: 2,
+				Run:   arrayUnset,
 			},
 			Builtin{
 				Name:  "get",
@@ -122,6 +128,19 @@ func arraySet(i Interpreter, args []env.Value) (env.Value, error) {
 		s.Set(list[i], env.Str(list[i+1]))
 	}
 	i.Define(slices.Fst(args).String(), s)
+	return nil, nil
+}
+
+func arrayUnset(i Interpreter, args []env.Value) (env.Value, error) {
+	arr, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	arr, err = arr.ToArray()
+	if err != nil {
+		return nil, err
+	}
+	arr.(env.Array).Unset(slices.Snd(args).String())
 	return nil, nil
 }
 

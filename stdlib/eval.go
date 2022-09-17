@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -454,11 +455,11 @@ func runSwitch(i Interpreter, args []env.Value) (env.Value, error) {
 }
 
 func runForeach(i Interpreter, args []env.Value) (env.Value, error) {
-	if len(args) % 3 != 0 {
+	if len(args)%3 != 0 {
 		return nil, fmt.Errorf("wrong number of arguments given")
 	}
 	var res env.Value
-	for j := 0; j < len(args); j+=3 {
+	for j := 0; j < len(args); j += 3 {
 		list, err := slices.At(args, j+1).ToList()
 		if err != nil {
 			return nil, err

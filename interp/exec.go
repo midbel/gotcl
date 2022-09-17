@@ -87,10 +87,17 @@ func DefaultSet() CommandSet {
 	return set
 }
 
+func StructSet() CommandSet {
+	set := EmptySet()
+	set.registerCmd("list", stdlib.MakeList())
+	return set
+}
+
 func FileutilSet() CommandSet {
 	set := EmptySet()
 	set.registerCmd("cat", stdlib.RunFileCat())
 	set.registerCmd("foreachLine", stdlib.RunFileForeachLine())
+	set.registerCmd("writeFile", stdlib.RunFileWriteFile())
 	return set
 }
 

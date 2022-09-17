@@ -150,6 +150,217 @@ func RunLInsert() Executer {
 	}
 }
 
+func MakeList() Executer {
+	e := Ensemble{
+		Name: "list",
+		Safe: true,
+		List: []Executer{
+			Builtin{
+				Name:     "merge",
+				Arity:    2,
+				Variadic: true,
+				Safe:     true,
+				Run:      listMerge,
+			},
+			Builtin{
+				Name:     "equal",
+				Arity:    2,
+				Variadic: true,
+				Safe:     true,
+				Run:      listEqual,
+			},
+			Builtin{
+				Name:  "map",
+				Arity: 2,
+				Safe:  true,
+				Run:   listApply,
+			},
+			Builtin{
+				Name:  "shuffle",
+				Arity: 1,
+				Safe:  true,
+				Run:   listShuffle,
+			},
+			Builtin{
+				Name:  "filter",
+				Arity: 1,
+				Safe:  true,
+				Run:   listFilter,
+			},
+			Builtin{
+				Name:  "Iota",
+				Arity: 1,
+				Safe:  true,
+				Run:   listIota,
+			},
+			Builtin{
+				Name:  "swap",
+				Arity: 3,
+				Safe:  true,
+				Run:   listSwap,
+			},
+			Builtin{
+				Name:  "shift",
+				Arity: 1,
+				Safe:  true,
+				Run:   listShift,
+			},
+			Builtin{
+				Name:  "flatten",
+				Arity: 1,
+				Safe:  true,
+				Options: []Option{
+					{
+						Name:  "full",
+						Flag:  true,
+						Value: env.False(),
+						Check: CheckBool,
+					},
+				},
+				Run: listFlatten,
+			},
+		},
+	}
+	return sortEnsembleCommands(e)
+}
+
+func listMerge(i Interpreter, args []env.Value) (env.Value, error) {
+	var vs []env.Value
+	for i := range args {
+		list, err := args[i].ToList()
+		if err != nil {
+			return nil, err
+		}
+		vs = append(vs, list.(env.List).Values()...)
+	}
+	return env.ListFrom(vs...), nil
+}
+
+func listEqual(i Interpreter, args []env.Value) (env.Value, error) {
+	var (
+		ls1, err1 = slices.Fst(args).ToList()
+		ls2, err2 = slices.Snd(args).ToList()
+	)
+	if err := hasError(err1, err2); err != nil {
+		return nil, err
+	}
+	eq, err := ls1.(env.List).Equal(ls2)
+	return env.Bool(eq), err
+}
+
+func listApply(i Interpreter, args []env.Value) (env.Value, error) {
+	x, ok := i.(interface {
+		LookupExec(string) (Executer, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("interpreter can not lookup for command")
+	}
+	exec, err := x.LookupExec(slices.Snd(args).String())
+	if err != nil {
+		return nil, err
+	}
+	list, err := slices.Fst(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	list = list.(env.List).Apply(func(v env.Value) env.Value {
+		v, _ = exec.Execute(i, []env.Value{v})
+		return v
+	})
+	return list, nil
+}
+
+func listShuffle(i Interpreter, args []env.Value) (env.Value, error) {
+	list, err := slices.Fst(args).ToList()
+	if err == nil {
+		list = list.(env.List).Shuffle()
+	}
+	return list, err
+}
+
+func listFilter(i Interpreter, args []env.Value) (env.Value, error) {
+	x, ok := i.(interface {
+		LookupExec(string) (Executer, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("interpreter can not lookup for command")
+	}
+	exec, err := x.LookupExec(slices.Snd(args).String())
+	if err != nil {
+		return nil, err
+	}
+	list, err := slices.Fst(args).ToList()
+	if err != nil {
+		return nil, err
+	}
+	list = list.(env.List).Filter(func(v env.Value) bool {
+		v, _ = exec.Execute(i, []env.Value{v})
+		return env.ToBool(v)
+	})
+	return list, nil
+}
+
+func listFlatten(i Interpreter, args []env.Value) (env.Value, error) {
+	var (
+		full, _   = i.Resolve("full")
+		list, err = slices.Fst(args).ToList()
+	)
+	if err == nil {
+		list = list.(env.List).Flat(env.ToBool(full))
+	}
+	return list, err
+}
+
+func listShift(i Interpreter, args []env.Value) (env.Value, error) {
+	list, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	list, err = list.ToList()
+	if err != nil {
+		return nil, err
+	}
+	elem, rest := list.(env.List).Shift()
+	i.Define(slices.Fst(args).String(), rest)
+	return elem, nil
+}
+
+func listIota(i Interpreter, args []env.Value) (env.Value, error) {
+	n, err := env.ToInt(slices.Fst(args))
+	if err != nil {
+		return nil, err
+	}
+	if n <= 0 {
+		return env.EmptyList(), nil
+	}
+	var vs []env.Value
+	for i := 0; i < n; i++ {
+		vs = append(vs, env.Int(int64(n)))
+	}
+	return env.ListFrom(vs...), nil
+}
+
+func listSwap(i Interpreter, args []env.Value) (env.Value, error) {
+	list, err := i.Resolve(slices.Fst(args).String())
+	if err != nil {
+		return nil, err
+	}
+	list, err = list.ToList()
+	if err != nil {
+		return nil, err
+	}
+	var (
+		fst, err1 = env.ToInt(slices.Snd(args))
+		snd, err2 = env.ToInt(slices.Lst(args))
+	)
+	if err := hasError(err1, err2); err != nil {
+		return nil, err
+	}
+	list = list.(env.List).Swap(fst, snd)
+	i.Define(slices.Fst(args).String(), list)
+	return list, nil
+}
+
 func runList(i Interpreter, args []env.Value) (env.Value, error) {
 	return slices.Fst(args).ToList()
 }
