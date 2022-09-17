@@ -425,7 +425,7 @@ func (i *Interpreter) execute(c *Command) (env.Value, error) {
 	if ok := exec.Scoped(); ok {
 		i.pushDefault(ns)
 		defer i.executeDefer()
-		
+
 		f := i.currentFrame()
 		f.cmd = exec
 		f.args = c.Args

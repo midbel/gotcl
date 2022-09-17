@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	stdin  = "stdin"
 	stdout = "stdout"
 	stderr = "stderr"
 )
@@ -112,6 +113,21 @@ func (fs *Fileset) Close(fd string) error {
 	}
 	delete(fs.files, fd)
 	return w.Close()
+}
+
+func (fs *Fileset) Copy(src, dst string, size int) (int64, error) {
+	r, err := fs.lookup(src)
+	if err != nil {
+		return 0, err
+	}
+	w, err := fs.lookup(dst)
+	if err != nil {
+		return 0, err
+	}
+	if size <= 0 {
+		return io.Copy(w, r)
+	}
+	return io.CopyN(w, r, int64(size))
 }
 
 func (fs *Fileset) Seek(fd string, offset, whence int) (int64, error) {
