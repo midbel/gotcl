@@ -133,6 +133,21 @@ func MakeChan() Executer {
 	return sortEnsembleCommands(e)
 }
 
+func RunFCopy() Executer {
+	return Builtin{
+		Name:  "copy",
+		Arity: 2,
+		Options: []Option{
+			{
+				Name:  "size",
+				Value: env.Zero(),
+				Check: CheckNumber,
+			},
+		},
+		Run: wrapChannelFunc(chanCopy),
+	}
+}
+
 func RunPuts() Executer {
 	return Builtin{
 		Name:  "puts",

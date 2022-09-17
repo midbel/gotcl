@@ -68,6 +68,7 @@ func DefaultSet() CommandSet {
 	set.registerCmd("gets", stdlib.RunGets())
 	set.registerCmd("read", stdlib.RunRead())
 	set.registerCmd("chan", stdlib.MakeChan())
+	set.registerCmd("fcopy", stdlib.RunFCopy())
 	set.registerCmd("file", stdlib.MakeFile())
 	set.registerCmd("list", stdlib.RunList())
 	set.registerCmd("split", stdlib.RunSplit())
