@@ -3,13 +3,48 @@ package strutil
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 var (
 	ErrRange    = errors.New("invalid interval")
 	ErrBoundary = errors.New("invalid boundary")
 )
+
+func LongestCommonPrefix(str []string) string {
+	if len(str) == 0 {
+		return ""
+	}
+	sort.Slice(str, func(i, j int) bool {
+		return len(str[i]) < len(str[j])
+	})
+	var (
+		first = str[0]
+		rest  [][]rune
+	)
+	for _, s := range str[1:] {
+		rest = append(rest, []rune(s))
+	}
+	var n int
+	for i, c := range first {
+		var ok bool
+		for _, str := range rest {
+			if ok = str[i] == c; !ok {
+				break
+			}
+		}
+		if !ok {
+			break
+		}
+		n += utf8.RuneLen(c)
+	}
+	if n > 0 {
+		return first[:n]
+	}
+	return ""
+}
 
 func Range(str string, fst, lst int) (string, error) {
 	if err := checkBoundary(str, fst, lst); err != nil {
