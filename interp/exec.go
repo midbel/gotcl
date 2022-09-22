@@ -177,7 +177,7 @@ func MathopSet() CommandSet {
 func (cs CommandSet) Rename(prev, next string) error {
 	e, ok := cs[prev]
 	if !ok {
-		return fmt.Errorf("%s: command not defined", prev)
+		return undefinedProc(prev)
 	}
 	delete(cs, prev)
 	if next != "" {
@@ -200,11 +200,11 @@ func (cs CommandSet) Procedures() []string {
 func (cs CommandSet) Args(proc string) ([]string, error) {
 	e, ok := cs[proc]
 	if !ok {
-		return nil, fmt.Errorf("%s: undefined", proc)
+		return nil, undefinedProc(proc)
 	}
 	p, ok := e.(procedure)
 	if !ok {
-		return nil, fmt.Errorf("%s is not a procedure", proc)
+		return nil, notaProcedure(proc, "can not get arguments")
 	}
 	var list []string
 	for _, a := range p.Args {
@@ -216,11 +216,11 @@ func (cs CommandSet) Args(proc string) ([]string, error) {
 func (cs CommandSet) Body(proc string) (string, error) {
 	e, ok := cs[proc]
 	if !ok {
-		return "", fmt.Errorf("%s: undefined", proc)
+		return "", undefinedProc(proc)
 	}
 	p, ok := e.(procedure)
 	if !ok {
-		return "", fmt.Errorf("%s is not a procedure", proc)
+		return "", notaProcedure(proc, "can not get body")
 	}
 	return p.Body, nil
 }
@@ -303,7 +303,7 @@ func parseArguments(str string) ([]argument, error) {
 				break
 			}
 			if w.Type != word.Literal && w.Type != word.Block {
-				return nil, ErrSyntax
+				return nil, fmt.Errorf("%w: unexpected word %s", ErrSyntax, w.Literal)
 			}
 			words = append(words, w.Literal)
 		}
@@ -345,10 +345,18 @@ func parseArguments(str string) ([]argument, error) {
 			return nil, ErrSyntax
 		}
 		if _, ok := seen[a.Name]; ok {
-			return nil, fmt.Errorf("%s: duplicate argument", a.Name)
+			return nil, fmt.Errorf("%w: argument %s already defined", ErrSyntax, a.Name)
 		}
 		seen[a.Name] = dummy
 		list = append(list, a)
 	}
 	return list, nil
+}
+
+func undefinedProc(proc string) error {
+	return fmt.Errorf("%s: procedure is not defined", proc)
+}
+
+func notaProcedure(proc, msg string) error {
+	return fmt.Errorf("%s of %s. %s is not a procedure!", proc, msg, proc)
 }

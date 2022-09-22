@@ -1,7 +1,6 @@
 package interp
 
 import (
-	"errors"
 	"fmt"
 	"os/exec"
 	"sort"
@@ -10,8 +9,6 @@ import (
 	"github.com/midbel/gotcl/stdlib"
 	"github.com/midbel/slices"
 )
-
-var ErrUndefined = errors.New("undefined name")
 
 type Namespace struct {
 	Name     string
@@ -48,8 +45,8 @@ func GlobalNS() *Namespace {
 		mathfunc  = createNS("mathfunc", MathfuncSet())
 		mathop    = createNS("mathop", MathopSet())
 		prefix    = createNS("prefix", PrefixSet())
-		fileutil  = FileutilNS()
-		utils     = UtilNS()
+		fileutil  = createNS("fileutil", FileutilSet())
+		utils     = createNS("util", UtilSet())
 		tcl       = emptyNS("tcl")
 		datstruct = createNS("struct", StructSet())
 	)
@@ -61,15 +58,6 @@ func GlobalNS() *Namespace {
 	global.RegisterNS(fileutil)
 	global.RegisterNS(datstruct)
 	return global
-}
-
-func UtilNS() *Namespace {
-	ns := createNS("util", UtilSet())
-	return ns
-}
-
-func FileutilNS() *Namespace {
-	return createNS("fileutil", FileutilSet())
 }
 
 func emptyNS(name string) *Namespace {
@@ -100,7 +88,7 @@ func (n *Namespace) RegisterNS(ns *Namespace) error {
 		return ns.Name >= n.children[i].Name
 	})
 	if x < len(n.children) && n.children[x].Name == ns.Name {
-		return fmt.Errorf("namespace %s already exists", ns.Name)
+		return fmt.Errorf("%s: namespace already exists", ns.Name)
 	}
 	tmp := append([]*Namespace{ns}, n.children[x:]...)
 	n.children = append(n.children[:x], tmp...)
@@ -131,7 +119,7 @@ func (n *Namespace) RegisterExec(name []string, exec stdlib.Executer) error {
 		return err
 	}
 	if len(name) == 1 {
-		n.CommandSet[name[0]] = exec
+		n.registerCmd(name[0], exec)
 		return nil
 	}
 	ns, err := n.lookupNS(name[0])
@@ -147,7 +135,7 @@ func (n *Namespace) LookupExec(name []string) (stdlib.Executer, error) {
 		return nil, err
 	}
 	if len(name) > 1 && len(n.children) == 0 {
-		return nil, fmt.Errorf("executer (lookup) %s (%s): %w", name[0], n.FQN(), ErrUndefined)
+		return nil, undefinedProc(strings.Join(name, "::"))
 	}
 	if len(name) == 1 {
 		exec, ok := n.CommandSet[name[0]]
@@ -157,7 +145,7 @@ func (n *Namespace) LookupExec(name []string) (stdlib.Executer, error) {
 		if !n.Root() {
 			return n.parent.LookupExec(name)
 		}
-		return nil, fmt.Errorf("executer (lookup) %s (%s): %w", name[0], n.FQN(), ErrUndefined)
+		return nil, undefinedProc(strings.Join(name, "::"))
 	}
 	ns, err := n.lookupNS(name[0])
 	if err == nil {

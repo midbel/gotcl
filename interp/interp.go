@@ -13,6 +13,8 @@ import (
 	"github.com/midbel/slices"
 )
 
+var ErrUndefined = errors.New("undefined")
+
 const Version = "0.0.1"
 
 type Interpreter struct {
